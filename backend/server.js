@@ -1,14 +1,11 @@
 import express from "express";
 import cors from "cors";
+import db from "./db.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// Temporary user storage
-let users = [];
-let transactions = [];
 
 // Test route
 app.get("/", (req, res) => {
@@ -17,73 +14,98 @@ app.get("/", (req, res) => {
 
 // Register User API
 app.post("/register", (req, res) => {
-
   const { name, email } = req.body;
 
-  const upiId = email.split("@")[0] + "@upi";
+  const upiId = name.toLowerCase() + "@upi";
+  const balance = 10000;
 
-  const newUser = {
-    name: name,
-    email: email,
-    upiId: upiId,
-    balance: 10000
-  };
+  const sql = "INSERT INTO users (name,email,upiId,balance) VALUES (?,?,?,?)";
 
-  users.push(newUser);
+  db.query(sql, [name, email, upiId, balance], (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: "Database error" });
+    }
 
-  res.json({
-    message: "User Registered",
-    user: newUser
+    res.json({
+      message: "User registered successfully",
+      upiId: upiId,
+    });
   });
-
 });
 
 // Send Money API
 app.post("/send-money", (req, res) => {
-
   const { senderUpi, receiverUpi, amount } = req.body;
 
-  const sender = users.find(user => user.upiId === senderUpi);
-  const receiver = users.find(user => user.upiId === receiverUpi);
+  const transferAmount = Number(amount);
 
-  if (!sender) {
-    return res.json({ message: "Sender not found" });
-  }
+  const findSender = "SELECT * FROM users WHERE upiId=?";
 
-  if (!receiver) {
-    return res.json({ message: "Receiver not found" });
-  }
+  db.query(findSender, [senderUpi], (err, senderResult) => {
+    if (senderResult.length === 0) {
+      return res.json({ message: "Sender not found" });
+    }
 
-  if (sender.balance < amount) {
-    return res.json({ message: "Insufficient balance" });
-  }
+    const sender = senderResult[0];
 
-  sender.balance -= amount;
-  receiver.balance += amount;
+    const findReceiver = "SELECT * FROM users WHERE upiId=?";
 
-  const transaction = {
-    sender: senderUpi,
-    receiver: receiverUpi,
-    amount: amount,
-    time: new Date()
-  };
+    db.query(findReceiver, [receiverUpi], (err, receiverResult) => {
+      if (receiverResult.length === 0) {
+        return res.json({ message: "Receiver not found" });
+      }
 
-  transactions.push(transaction);
+      const receiver = receiverResult[0];
 
-  res.json({
-    message: "Transaction Successful",
-    senderBalance: sender.balance
+      if (sender.balance < transferAmount) {
+        return res.json({ message: "Insufficient balance" });
+      }
+
+      const updateSender =
+        "UPDATE users SET balance = balance - ? WHERE upiId=?";
+
+      db.query(updateSender, [transferAmount, senderUpi]);
+
+      const updateReceiver =
+        "UPDATE users SET balance = balance + ? WHERE upiId=?";
+
+      db.query(updateReceiver, [transferAmount, receiverUpi]);
+
+      const storeTransaction =
+        "INSERT INTO transactions (sender,receiver,amount,time) VALUES (?,?,?,NOW())";
+
+      db.query(storeTransaction, [senderUpi, receiverUpi, transferAmount]);
+
+      res.json({
+        message: "Transaction successful",
+      });
+    });
   });
-
 });
 
 app.get("/transactions", (req, res) => {
-  res.json(transactions);
+  const sql = "SELECT * FROM transactions ORDER BY time DESC";
+
+  db.query(sql, (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    res.json(result);
+  });
 });
 
 //NEW API
 app.get("/users", (req, res) => {
-  res.json(users);
+  const sql = "SELECT * FROM users";
+
+  db.query(sql, (err, result) => {
+    if (err) {
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    res.json(result);
+  });
 });
 
 const PORT = 5000;
