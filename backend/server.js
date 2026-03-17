@@ -2,10 +2,28 @@ import express from "express";
 import cors from "cors";
 import db from "./db.js";
 
+// NEW IMPORTS
+import fs from "fs";
+import csv from "csv-parser";
+import axios from "axios";
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// NEW: Fraud dataset list
+let fraudUpis = [];
+
+// Load fraud dataset
+fs.createReadStream("../ml_service/fraud_dataset.csv")
+  .pipe(csv())
+  .on("data", (row) => {
+    fraudUpis.push(row.upi_id);
+  })
+  .on("end", () => {
+    console.log("Fraud dataset loaded:", fraudUpis);
+  });
 
 // Test route
 app.get("/", (req, res) => {
@@ -41,7 +59,7 @@ app.post("/send-money", (req, res) => {
 
   const findSender = "SELECT * FROM users WHERE upiId=?";
 
-  db.query(findSender, [senderUpi], (err, senderResult) => {
+  db.query(findSender, [senderUpi], async (err, senderResult) => {
     if (senderResult.length === 0) {
       return res.json({ message: "Sender not found" });
     }
@@ -50,7 +68,7 @@ app.post("/send-money", (req, res) => {
 
     const findReceiver = "SELECT * FROM users WHERE upiId=?";
 
-    db.query(findReceiver, [receiverUpi], (err, receiverResult) => {
+    db.query(findReceiver, [receiverUpi], async (err, receiverResult) => {
       if (receiverResult.length === 0) {
         return res.json({ message: "Receiver not found" });
       }
@@ -59,6 +77,32 @@ app.post("/send-money", (req, res) => {
 
       if (sender.balance < transferAmount) {
         return res.json({ message: "Insufficient balance" });
+      }
+
+      // NEW: Blocklist Fraud Check
+      if (fraudUpis.includes(receiverUpi)) {
+        return res.json({
+          message: "Transaction Blocked: Receiver in Fraud Dataset",
+        });
+      }
+
+      try {
+        // NEW: ML Fraud Check
+        const mlResponse = await axios.post("http://localhost:8000/predict", {
+          amount: transferAmount,
+          sender_balance: sender.balance,
+          is_new_receiver: 0,
+        });
+
+        const risk = mlResponse.data.risk;
+
+        if (risk === "High Risk") {
+          return res.json({
+            message: "Transaction Blocked: High Fraud Risk",
+          });
+        }
+      } catch (error) {
+        console.log("ML Service Error");
       }
 
       const updateSender =
