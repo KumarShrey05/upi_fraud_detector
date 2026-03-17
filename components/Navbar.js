@@ -6,8 +6,8 @@ export default function Navbar() {
   return (
     <div className="bg-white shadow p-4 flex justify-between">
 
-      <h1 className="font-bold text-xl">
-        UPI App
+      <h1 className="font-bold text-xl text-black">
+        UPay
       </h1>
 
       <div className="flex gap-6">
