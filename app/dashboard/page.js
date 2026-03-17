@@ -1,27 +1,56 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
 
+
 export default function Dashboard() {
-  const { user } = useUser();
+const { user, isLoaded } = useUser();
+const router = useRouter();
 
   // Register user in backend
-  useEffect(() => {
-    if (user) {
-      fetch("http://localhost:5000/register", {
+useEffect(() => {
+  if (!isLoaded) return;
+
+  if (!user) {
+    console.log("User not loaded yet");
+    return;
+  }
+
+  const email = user.primaryEmailAddress?.emailAddress;
+
+  if (!email) {
+    console.log("Email not found");
+    return;
+  }
+
+  console.log("🔥 Registering user:", email);
+
+  const register = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: user.fullName,
-          email: user.primaryEmailAddress?.emailAddress,
+          email,
+          name: user.fullName || "User",
         }),
       });
+
+      const data = await res.json();
+      console.log("✅ Response:", data);
+    } catch (err) {
+      console.error("❌ Fetch error:", err);
     }
-  }, [user]);
+  };
+
+  register();
+
+}, [isLoaded, user]);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -37,7 +66,7 @@ export default function Dashboard() {
       </h1>
 
       {/* Balance Card */}
-      <div className="bg-white shadow-lg rounded-xl p-6 w-80 mb-6">
+      <div className="bg-white shadow-lg rounded-xl p-6 w-80 mb-6 hover:shadow-2xl hover:scale-105 transition duration-300">
         <h2 className="text-lg font-semibold text-gray-600">
           Available Balance
         </h2>
@@ -49,11 +78,11 @@ export default function Dashboard() {
 
       {/* Actions */}
       <div className="flex gap-4">
-        <button className="bg-blue-600 text-white px-6 py-3 rounded-lg">
+        <button onClick={() => router.push("/send-money")} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition duration-300 ease-in-out">
           Send Money
         </button>
 
-        <button className="bg-purple-600 text-white px-6 py-3 rounded-lg">
+        <button onClick={() => router.push("/transactions")} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition duration-300 ease-in-out">
           Transactions
         </button>
       </div>

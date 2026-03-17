@@ -2,10 +2,12 @@ import express from "express";
 import cors from "cors";
 import db from "./db.js";
 
-// NEW IMPORTS
 import fs from "fs";
 import csv from "csv-parser";
 import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
@@ -31,100 +33,118 @@ app.get("/", (req, res) => {
 });
 
 // Register User API
-app.post("/register", (req, res) => {
+const generateUpiId = (email) => {
+  const name = email.split("@")[0];
+  return name.toLowerCase() + "@upi";
+};
+
+app.post("/register", async (req, res) => {
   const { name, email } = req.body;
 
-  const upiId = name.toLowerCase() + "@upi";
-  const balance = 10000;
+  const upiId = generateUpiId(email);
+  console.log("API HIT:", req.body);
 
-  const sql = "INSERT INTO users (name,email,upiId,balance) VALUES (?,?,?,?)";
+  try {
+    // check if user exists
+    const [existing] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
 
-  db.query(sql, [name, email, upiId, balance], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Database error" });
+    if (existing.length > 0) {
+      return res.json(existing[0]);
     }
 
+    // create new user
+    await db.query(
+      "INSERT INTO users (name, email, upiId, balance) VALUES (?, ?, ?, ?)",
+      [name, email, upiId, 10000],
+    );
+
     res.json({
-      message: "User registered successfully",
-      upiId: upiId,
+      message: "User created",
+      upiId,
+      balance: 10000,
     });
-  });
+    console.log("User inserted successfully");
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Send Money API
-app.post("/send-money", (req, res) => {
-  const { senderUpi, receiverUpi, amount } = req.body;
+app.post("/send-money", async (req, res) => {
+  const { sender, receiver, amount } = req.body;
 
-  const transferAmount = Number(amount);
+  console.log("API HIT");
+  console.log("Sender:", sender);
+  console.log("Receiver:", receiver);
+  console.log("Amount:", amount);
 
-  const findSender = "SELECT * FROM users WHERE upiId=?";
+  try {
+    const amt = Number(amount);
 
-  db.query(findSender, [senderUpi], async (err, senderResult) => {
-    if (senderResult.length === 0) {
+    // ❗ invalid amount check
+    if (!amt || amt <= 0) {
+      return res.json({ message: "Invalid amount" });
+    }
+
+    // 🔍 sender check
+    const [senderUser] = await db.query("SELECT * FROM users WHERE upiId = ?", [
+      sender,
+    ]);
+
+    if (senderUser.length === 0) {
       return res.json({ message: "Sender not found" });
     }
 
-    const sender = senderResult[0];
+    // 🔍 receiver check
+    const [receiverUser] = await db.query(
+      "SELECT * FROM users WHERE upiId = ?",
+      [receiver],
+    );
 
-    const findReceiver = "SELECT * FROM users WHERE upiId=?";
+    if (receiverUser.length === 0) {
+      return res.json({ message: "Receiver not found" });
+    }
 
-    db.query(findReceiver, [receiverUpi], async (err, receiverResult) => {
-      if (receiverResult.length === 0) {
-        return res.json({ message: "Receiver not found" });
-      }
+    const senderData = senderUser[0];
+    const receiverData = receiverUser[0];
 
-      const receiver = receiverResult[0];
+    // 💰 balance check
+    if (senderData.balance < amt) {
+      return res.json({ message: "Insufficient balance" });
+    }
 
-      if (sender.balance < transferAmount) {
-        return res.json({ message: "Insufficient balance" });
-      }
+    // 🔥 TRANSACTION START
 
-      // NEW: Blocklist Fraud Check
-      if (fraudUpis.includes(receiverUpi)) {
-        return res.json({
-          message: "Transaction Blocked: Receiver in Fraud Dataset",
-        });
-      }
+    // 1️⃣ Deduct sender
+    await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
+      amt,
+      sender,
+    ]);
 
-      try {
-        // NEW: ML Fraud Check
-        const mlResponse = await axios.post("http://localhost:8000/predict", {
-          amount: transferAmount,
-          sender_balance: sender.balance,
-          is_new_receiver: 0,
-        });
+    // 2️⃣ Add receiver
+    await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
+      amt,
+      receiver,
+    ]);
 
-        const risk = mlResponse.data.risk;
+    // 3️⃣ Insert transaction
+    await db.query(
+      "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
+      [sender, receiver, amt],
+    );
 
-        if (risk === "High Risk") {
-          return res.json({
-            message: "Transaction Blocked: High Fraud Risk",
-          });
-        }
-      } catch (error) {
-        console.log("ML Service Error");
-      }
+    console.log("Transaction successful");
 
-      const updateSender =
-        "UPDATE users SET balance = balance - ? WHERE upiId=?";
-
-      db.query(updateSender, [transferAmount, senderUpi]);
-
-      const updateReceiver =
-        "UPDATE users SET balance = balance + ? WHERE upiId=?";
-
-      db.query(updateReceiver, [transferAmount, receiverUpi]);
-
-      const storeTransaction =
-        "INSERT INTO transactions (sender,receiver,amount,time) VALUES (?,?,?,NOW())";
-
-      db.query(storeTransaction, [senderUpi, receiverUpi, transferAmount]);
-
-      res.json({
-        message: "Transaction successful",
-      });
+    res.json({
+      message: "Transaction successful",
     });
-  });
+  } catch (err) {
+    console.log("ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 app.get("/transactions", (req, res) => {
@@ -139,17 +159,50 @@ app.get("/transactions", (req, res) => {
   });
 });
 
-//NEW API
-app.get("/users", (req, res) => {
-  const sql = "SELECT * FROM users";
+app.get("/transactions/:upiId", async (req, res) => {
+  const { upiId } = req.params;
 
-  db.query(sql, (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Database error" });
+  try {
+    const [data] = await db.query(
+      "SELECT * FROM transactions WHERE sender = ? OR receiver = ? ORDER BY time DESC",
+      [upiId, upiId]
+    );
+
+    res.json(data);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error fetching transactions" });
+  }
+});
+
+//NEW API
+app.get("/users", async (req, res) => {
+  try {
+    const [result] = await db.query("SELECT * FROM users");
+    res.json(result);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+app.get("/user/:email", async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const [user] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+
+    if (user.length === 0) {
+      return res.json({ message: "User not found" });
     }
 
-    res.json(result);
-  });
+    res.json(user[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 const PORT = 5000;
