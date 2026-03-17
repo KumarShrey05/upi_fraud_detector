@@ -10,6 +10,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+const otpStore = {};
 
 app.use(cors());
 app.use(express.json());
@@ -76,74 +77,152 @@ app.post("/register", async (req, res) => {
 app.post("/send-money", async (req, res) => {
   const { sender, receiver, amount } = req.body;
 
-  console.log("API HIT");
-  console.log("Sender:", sender);
-  console.log("Receiver:", receiver);
-  console.log("Amount:", amount);
-
   try {
     const amt = Number(amount);
 
-    // ❗ invalid amount check
-    if (!amt || amt <= 0) {
-      return res.json({ message: "Invalid amount" });
+    // basic validation
+    if (!sender || !receiver || !amt || amt <= 0) {
+      return res.json({
+        status: "failed",
+        message: "Invalid input",
+      });
     }
 
-    // 🔍 sender check
-    const [senderUser] = await db.query("SELECT * FROM users WHERE upiId = ?", [
-      sender,
-    ]);
+    // prevent self transfer
+    if (sender === receiver) {
+      return res.json({
+        status: "failed",
+        message: "Cannot send money to yourself",
+      });
+    }
+
+    // sender fetch
+    const [senderUser] = await db.query(
+      "SELECT * FROM users WHERE upiId = ?",
+      [sender]
+    );
 
     if (senderUser.length === 0) {
-      return res.json({ message: "Sender not found" });
+      return res.json({
+        status: "failed",
+        message: "Sender not found",
+      });
     }
 
-    // 🔍 receiver check
+    // receiver fetch
     const [receiverUser] = await db.query(
       "SELECT * FROM users WHERE upiId = ?",
-      [receiver],
+      [receiver]
     );
 
     if (receiverUser.length === 0) {
-      return res.json({ message: "Receiver not found" });
+      return res.json({
+        status: "failed",
+        message: "Receiver not found",
+      });
     }
 
     const senderData = senderUser[0];
-    const receiverData = receiverUser[0];
 
-    // 💰 balance check
+    // balance check
     if (senderData.balance < amt) {
-      return res.json({ message: "Insufficient balance" });
+      return res.json({
+        status: "failed",
+        message: "Insufficient balance",
+      });
     }
 
-    // 🔥 TRANSACTION START
+    // =========================
+    // FRAUD CHECK (basic for now)
+    // =========================
 
-    // 1️⃣ Deduct sender
-    await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
-      amt,
-      sender,
-    ]);
+    let isBlocked = false;
+    let isWarning = false;
+    let reason = "";
 
-    // 2️⃣ Add receiver
-    await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
-      amt,
-      receiver,
-    ]);
+    // example rule: high amount
+if (amt > 5000) {
+  const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // 3️⃣ Insert transaction
+  otpStore[sender] = {
+    otp,
+    sender,
+    receiver,
+    amount: amt,
+    time: Date.now(),
+  };
+
+  console.log("OTP:", otp); 
+
+return res.json({
+  status: "otp_required",
+  message: "OTP required",
+  otp: otp, 
+});
+}
+
+    // example rule: fake blocklist
+    if (receiver.includes("fraud")) {
+      isBlocked = true;
+      reason = "Receiver is suspicious";
+    }
+
+    // =========================
+    // BLOCKED CASE
+    // =========================
+    if (isBlocked) {
+      return res.json({
+        status: "blocked",
+        message: "Transaction blocked",
+        reason: reason,
+      });
+    }
+
+    // =========================
+    // TRANSACTION EXECUTION
+    // =========================
+
+    // deduct sender
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
-      [sender, receiver, amt],
+      "UPDATE users SET balance = balance - ? WHERE upiId = ?",
+      [amt, sender]
     );
 
-    console.log("Transaction successful");
+    // add receiver
+    await db.query(
+      "UPDATE users SET balance = balance + ? WHERE upiId = ?",
+      [amt, receiver]
+    );
 
-    res.json({
+    // insert transaction
+    await db.query(
+      "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
+      [sender, receiver, amt]
+    );
+
+    // =========================
+    // RESPONSE
+    // =========================
+
+    if (isWarning) {
+      return res.json({
+        status: "warning",
+        message: "Transaction successful",
+        reason: reason,
+      });
+    }
+
+    return res.json({
+      status: "success",
       message: "Transaction successful",
     });
+
   } catch (err) {
-    console.log("ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    console.log(err);
+    res.status(500).json({
+      status: "failed",
+      message: "Server error",
+    });
   }
 });
 
@@ -186,6 +265,26 @@ app.get("/users", async (req, res) => {
   }
 });
 
+app.get("/user/:upiId", async (req, res) => {
+  const { upiId } = req.params;
+
+  try {
+    const [user] = await db.query(
+      "SELECT * FROM users WHERE upiId = ?",
+      [upiId]
+    );
+
+    if (user.length === 0) {
+      return res.json({ message: "User not found" });
+    }
+
+    res.json(user[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error fetching user" });
+  }
+});
+
 app.get("/user/:email", async (req, res) => {
   const { email } = req.params;
 
@@ -202,6 +301,59 @@ app.get("/user/:email", async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/verify-otp", async (req, res) => {
+  const { sender, otp } = req.body;
+
+  const data = otpStore[sender];
+
+  if (!data) {
+    return res.json({
+      status: "failed",
+      message: "No OTP request found",
+    });
+  }
+
+  if (Number(otp) !== data.otp) {
+    return res.json({
+      status: "failed",
+      message: "Invalid OTP",
+    });
+  }
+
+  try {
+    // execute transaction now
+
+    await db.query(
+      "UPDATE users SET balance = balance - ? WHERE upiId = ?",
+      [data.amount, data.sender]
+    );
+
+    await db.query(
+      "UPDATE users SET balance = balance + ? WHERE upiId = ?",
+      [data.amount, data.receiver]
+    );
+
+    await db.query(
+      "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
+      [data.sender, data.receiver, data.amount]
+    );
+
+    delete otpStore[sender];
+
+    return res.json({
+      status: "success",
+      message: "Transaction successful",
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      status: "failed",
+      message: "Server error",
+    });
   }
 });
 

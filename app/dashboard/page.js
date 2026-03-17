@@ -3,11 +3,12 @@
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@clerk/nextjs";
-import { useEffect } from "react";
+import {  useState, useEffect } from "react";
 
 
 export default function Dashboard() {
 const { user, isLoaded } = useUser();
+const [balance, setBalance] = useState(0);
 const router = useRouter();
 
   // Register user in backend
@@ -52,6 +53,20 @@ useEffect(() => {
 
 }, [isLoaded, user]);
 
+useEffect(() => {
+  if (!isLoaded || !user) return;
+
+  const upiId =
+    user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+
+  fetch(`http://localhost:5000/user/${upiId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      setBalance(data.balance);
+    })
+    .catch((err) => console.log(err));
+}, [isLoaded, user]);
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <Navbar />
@@ -72,7 +87,7 @@ useEffect(() => {
         </h2>
 
         <p className="text-3xl font-bold text-green-600 mt-2">
-          ₹10,000
+          ₹{balance}
         </p>
       </div>
 

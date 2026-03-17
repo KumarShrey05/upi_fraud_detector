@@ -20,7 +20,7 @@ export default function Navbar() {
           Send
         </Link>
 
-        <Link href="/transaction" className="text-blue-600">
+        <Link href="/transactions" className="text-blue-600">
           Transactions
         </Link>
 
