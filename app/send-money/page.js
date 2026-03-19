@@ -106,18 +106,24 @@ export default function SendMoney() {
 
       if (data.status === "success") {
         showToast("Transaction successful", "success");
+        const audio = new Audio("/sucess.mp3");
+        audio.play().catch(() => {});
         saveRecent(receiver);
         setTimeout(() => {
           router.push("/dashboard");
         }, 2000);
       } else if (data.status === "warning") {
         showToast(data.reason, "warning");
+        const audio = new Audio("/sucess.mp3");
+        audio.play().catch(() => {});
         saveRecent(receiver);
         setTimeout(() => {
           router.push("/dashboard");
         }, 2000);
       } else if (data.status === "blocked") {
         showToast(data.reason, "error");
+        const audio = new Audio("/failed.mp3");
+        audio.play().catch(() => {});
         setTimeout(() => {
           router.push("/dashboard");
         }, 1500);
@@ -139,8 +145,7 @@ export default function SendMoney() {
   const handleVerifyOtp = async () => {
     if (!user) return;
 
-    const sender =
-      user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+    const sender = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
 
     try {
       const res = await fetch("http://localhost:5000/verify-otp", {
@@ -158,6 +163,8 @@ export default function SendMoney() {
 
       if (data.status === "success") {
         showToast("Transaction successful", "success");
+        const audio = new Audio("/sucess.mp3");
+        audio.play().catch(() => {});
         setTimeout(() => {
           router.push("/dashboard");
         }, 2000);
@@ -167,6 +174,8 @@ export default function SendMoney() {
     } catch (err) {
       console.log(err);
       showToast("Error verifying OTP", "error");
+      const audio = new Audio("/failed.mp3");
+        audio.play().catch(() => {});
     }
   };
 
@@ -200,7 +209,7 @@ export default function SendMoney() {
 
                 // ✅ Only show if match found
                 const match = suggestions.filter((upi) =>
-                  upi.toLowerCase().includes(value.toLowerCase())
+                  upi.toLowerCase().includes(value.toLowerCase()),
                 );
 
                 if (value && match.length > 0) {
@@ -223,7 +232,7 @@ export default function SendMoney() {
               <div className="mt-2 bg-white rounded-lg p-2 shadow-md border">
                 {suggestions
                   .filter((upi) =>
-                    upi.toLowerCase().includes(receiver.toLowerCase())
+                    upi.toLowerCase().includes(receiver.toLowerCase()),
                   )
                   .map((upi, index) => (
                     <div
@@ -235,9 +244,7 @@ export default function SendMoney() {
                       className="cursor-pointer text-sm text-blue-600 hover:bg-blue-100 px-2 py-1 rounded flex justify-between"
                     >
                       <span>{upi}</span>
-                      <span className="text-gray-400 text-xs">
-                        used before
-                      </span>
+                      <span className="text-gray-400 text-xs">used before</span>
                     </div>
                   ))}
               </div>
@@ -268,13 +275,11 @@ export default function SendMoney() {
 
           {showOtp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
-
               {/* Background Overlay */}
               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeOverlay" />
 
               {/* Modal */}
               <div className="relative bg-white w-[380px] rounded-2xl shadow-2xl p-6 animate-scaleIn">
-
                 {/* Title */}
                 <h2 className="text-xl font-semibold text-gray-800 mb-1">
                   OTP Verification
@@ -286,7 +291,10 @@ export default function SendMoney() {
 
                 {/* OTP Display */}
                 <div className="bg-indigo-50 text-indigo-600 text-sm p-2 rounded-md text-center mb-4">
-                  OTP: <span className="font-bold tracking-widest">{generatedOtp}</span>
+                  OTP:{" "}
+                  <span className="font-bold tracking-widest">
+                    {generatedOtp}
+                  </span>
                 </div>
 
                 {/* Input */}
@@ -325,25 +333,24 @@ export default function SendMoney() {
       </div>
       {toast.show && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
-
           <div
             className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-500
-      ${toast.type === "success"
-                ? "bg-green-600"
-                : toast.type === "warning"
-                  ? "bg-yellow-500"
-                  : "bg-red-600"
-              }`}
+      ${
+        toast.type === "success"
+          ? "bg-green-600"
+          : toast.type === "warning"
+            ? "bg-yellow-500"
+            : "bg-red-600"
+      }`}
             style={{
-              animation: "toastSlide 0.4s ease, toastFade 2.5s ease 0.5s forwards"
+              animation:
+                "toastSlide 0.4s ease, toastFade 2.5s ease 0.5s forwards",
             }}
           >
             {toast.message}
           </div>
-
         </div>
       )}
-
-    </div >
+    </div>
   );
 }
