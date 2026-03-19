@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { useSearchParams } from "next/navigation";
 
 export default function SendMoney() {
   const { user } = useUser();
@@ -16,6 +17,16 @@ export default function SendMoney() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  // const [receiver, setReceiver] = useState("");
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const receiverFromQR = searchParams.get("receiver");
+
+    if (receiverFromQR) {
+      setReceiver(receiverFromQR);
+    }
+  }, [searchParams]);
 
   const wrapperRef = useRef(null);
 
@@ -107,13 +118,22 @@ export default function SendMoney() {
         }, 2000);
       } else if (data.status === "blocked") {
         showToast(data.reason, "error");
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
       } else {
         showToast(data.message || "Transaction failed", "error");
       }
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1500);
     } catch (err) {
       console.error(err);
       alert("❌ Server error");
     }
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 1500);
   };
 
   const handleVerifyOtp = async () => {
@@ -303,27 +323,26 @@ export default function SendMoney() {
           )}
         </div>
       </div>
-{toast.show && (
-  <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
-    
-    <div
-      className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-500
-      ${
-        toast.type === "success"
-          ? "bg-green-600"
-          : toast.type === "warning"
-          ? "bg-yellow-500"
-          : "bg-red-600"
-      }`}
-      style={{
-        animation: "toastSlide 0.4s ease, toastFade 2.5s ease 0.5s forwards"
-      }}
-    >
-      {toast.message}
-    </div>
+      {toast.show && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
 
-  </div>
-)}
+          <div
+            className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-500
+      ${toast.type === "success"
+                ? "bg-green-600"
+                : toast.type === "warning"
+                  ? "bg-yellow-500"
+                  : "bg-red-600"
+              }`}
+            style={{
+              animation: "toastSlide 0.4s ease, toastFade 2.5s ease 0.5s forwards"
+            }}
+          >
+            {toast.message}
+          </div>
+
+        </div>
+      )}
 
     </div >
   );

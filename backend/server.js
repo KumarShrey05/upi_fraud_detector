@@ -97,10 +97,9 @@ app.post("/send-money", async (req, res) => {
     }
 
     // sender fetch
-    const [senderUser] = await db.query(
-      "SELECT * FROM users WHERE upiId = ?",
-      [sender]
-    );
+    const [senderUser] = await db.query("SELECT * FROM users WHERE upiId = ?", [
+      sender,
+    ]);
 
     if (senderUser.length === 0) {
       return res.json({
@@ -112,7 +111,7 @@ app.post("/send-money", async (req, res) => {
     // receiver fetch
     const [receiverUser] = await db.query(
       "SELECT * FROM users WHERE upiId = ?",
-      [receiver]
+      [receiver],
     );
 
     if (receiverUser.length === 0) {
@@ -123,6 +122,7 @@ app.post("/send-money", async (req, res) => {
     }
 
     const senderData = senderUser[0];
+    // const percentage = (amt / senderData.balance) * 100;
 
     // balance check
     if (senderData.balance < amt) {
@@ -141,63 +141,82 @@ app.post("/send-money", async (req, res) => {
     let reason = "";
 
     // example rule: high amount
-if (amt > 5000) {
-  const otp = Math.floor(100000 + Math.random() * 900000);
+    if (amt > senderData.balance * 0.5 || amt > 5000) {
+      const otp = Math.floor(100000 + Math.random() * 900000);
 
-  otpStore[sender] = {
-    otp,
-    sender,
-    receiver,
-    amount: amt,
-    time: Date.now(),
-  };
+      otpStore[sender] = {
+        otp,
+        sender,
+        receiver,
+        amount: amt,
+        time: Date.now(),
+      };
 
-  console.log("OTP:", otp); 
+      console.log("OTP:", otp);
 
-return res.json({
-  status: "otp_required",
-  message: "OTP required",
-  otp: otp, 
-});
-}
+      return res.json({
+        status: "otp_required",
+        message: "OTP required",
+        otp: otp,
+      });
+    }
 
     // example rule: fake blocklist
-    if (receiver.includes("fraud")) {
-      isBlocked = true;
-      reason = "Receiver is suspicious";
-    }
+if (receiver.includes("sanyuktasinha124@upi")) {
+  await db.query(
+    "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+    [sender, receiver, amt, "blocked", "Receiver is suspicious"]
+  );
+
+  return res.json({
+    status: "blocked",
+    message: "Transaction blocked",
+    reason: "Receiver is suspicious",
+  });
+}
 
     // =========================
     // BLOCKED CASE
     // =========================
-    if (isBlocked) {
-      return res.json({
-        status: "blocked",
-        message: "Transaction blocked",
-        reason: reason,
-      });
-    }
+if (isBlocked) {
+  await db.query(
+    "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+    [sender, receiver, amt, "Amount too high", reason]
+  );
+
+
+  return res.json({
+    status: "blocked",
+    message: "Transaction too large",
+    reason: reason,
+  });
+}
 
     // =========================
     // TRANSACTION EXECUTION
     // =========================
 
     // deduct sender
-    await db.query(
-      "UPDATE users SET balance = balance - ? WHERE upiId = ?",
-      [amt, sender]
-    );
+    await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
+      amt,
+      sender,
+    ]);
 
     // add receiver
-    await db.query(
-      "UPDATE users SET balance = balance + ? WHERE upiId = ?",
-      [amt, receiver]
-    );
+    await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
+      amt,
+      receiver,
+    ]);
+
+await db.query(
+  "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+  [sender, receiver, amt, "success", "Normal transaction"]
+);
 
     // insert transaction
     await db.query(
       "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
-      [sender, receiver, amt]
+      [sender, receiver, amt],
     );
 
     // =========================
@@ -216,7 +235,6 @@ return res.json({
       status: "success",
       message: "Transaction successful",
     });
-
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -244,7 +262,7 @@ app.get("/transactions/:upiId", async (req, res) => {
   try {
     const [data] = await db.query(
       "SELECT * FROM transactions WHERE sender = ? OR receiver = ? ORDER BY time DESC",
-      [upiId, upiId]
+      [upiId, upiId],
     );
 
     res.json(data);
@@ -269,10 +287,9 @@ app.get("/user/:upiId", async (req, res) => {
   const { upiId } = req.params;
 
   try {
-    const [user] = await db.query(
-      "SELECT * FROM users WHERE upiId = ?",
-      [upiId]
-    );
+    const [user] = await db.query("SELECT * FROM users WHERE upiId = ?", [
+      upiId,
+    ]);
 
     if (user.length === 0) {
       return res.json({ message: "User not found" });
@@ -304,11 +321,25 @@ app.get("/user/:email", async (req, res) => {
   }
 });
 
+app.get("/fraud-transactions", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM transactions WHERE status = 'blocked' ORDER BY time DESC"
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error fetching fraud transactions" });
+  }
+});
+
 app.post("/verify-otp", async (req, res) => {
   const { sender, otp } = req.body;
 
   const data = otpStore[sender];
 
+  // ❌ No OTP found
   if (!data) {
     return res.json({
       status: "failed",
@@ -316,6 +347,7 @@ app.post("/verify-otp", async (req, res) => {
     });
   }
 
+  // ❌ Wrong OTP
   if (Number(otp) !== data.otp) {
     return res.json({
       status: "failed",
@@ -324,33 +356,55 @@ app.post("/verify-otp", async (req, res) => {
   }
 
   try {
-    // execute transaction now
+    // =========================
+    // EXECUTE TRANSACTION
+    // =========================
 
+    // 🔻 Deduct sender balance
     await db.query(
       "UPDATE users SET balance = balance - ? WHERE upiId = ?",
       [data.amount, data.sender]
     );
 
+    // 🔺 Add receiver balance
     await db.query(
       "UPDATE users SET balance = balance + ? WHERE upiId = ?",
       [data.amount, data.receiver]
     );
 
+    // =========================
+    // SAVE TRANSACTION (UPDATED)
+    // =========================
+
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
-      [data.sender, data.receiver, data.amount]
+      "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+      [
+        data.sender,
+        data.receiver,
+        data.amount,
+        "success",
+        "High amount - OTP verified",
+      ]
     );
 
+    // =========================
+    // CLEANUP
+    // =========================
+
     delete otpStore[sender];
+
+    // =========================
+    // RESPONSE
+    // =========================
 
     return res.json({
       status: "success",
       message: "Transaction successful",
     });
-
   } catch (err) {
-    console.log(err);
-    res.status(500).json({
+    console.log("OTP Transaction Error:", err);
+
+    return res.status(500).json({
       status: "failed",
       message: "Server error",
     });
