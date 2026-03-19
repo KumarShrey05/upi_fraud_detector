@@ -4,16 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "server": "cd backend && nodemon server.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "both": "concurrently \"npm run server\" \"npm run dev\""
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.4",
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
+    "html5-qrcode": "^2.3.8",
     "next": "16.1.6",
     "next-auth": "^4.24.13",
+    "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -21,6 +25,7 @@
     "@tailwindcss/postcss": "^4",
     "autoprefixer": "^10.4.27",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.8",
