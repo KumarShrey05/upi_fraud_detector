@@ -9,6 +9,31 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+async function checkML({ sender, receiver, amount, sender_balance, is_new_receiver }) {
+  try {
+    const res = await axios.post("http://localhost:8000/predict", {
+      amount: amount,
+      sender_balance: sender_balance,   // ✅ ADD THIS
+      is_new_receiver: is_new_receiver,
+    });
+
+    const risk = res.data.risk;
+    const score = res.data.score;
+
+    console.log("ML Prediction:", risk);
+
+if (risk === "Medium Risk") return { status: "medium_risk", score };
+if (risk === "High Risk") return { status: "high_risk", score };
+
+return { status: "normal", score };
+
+    return { status: "normal" };
+  } catch (err) {
+    console.log("ML API error:", err.message);
+    return { status: "normal" };
+  }
+}
+
 const app = express();
 const otpStore = {};
 
@@ -80,15 +105,13 @@ app.post("/send-money", async (req, res) => {
   try {
     const amt = Number(amount);
 
-    // basic validation
+    // =========================
+    // BASIC VALIDATION
+    // =========================
     if (!sender || !receiver || !amt || amt <= 0) {
-      return res.json({
-        status: "failed",
-        message: "Invalid input",
-      });
+      return res.json({ status: "failed", message: "Invalid input" });
     }
 
-    // prevent self transfer
     if (sender === receiver) {
       return res.json({
         status: "failed",
@@ -96,36 +119,43 @@ app.post("/send-money", async (req, res) => {
       });
     }
 
-    // sender fetch
-    const [senderUser] = await db.query("SELECT * FROM users WHERE upiId = ?", [
-      sender,
-    ]);
+    // =========================
+    // CSV FRAUD CHECK (BLOCK ONLY HERE)
+    // =========================
+    if (fraudUpis.includes(receiver.toLowerCase().trim())) {
+      await db.query(
+        "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+        [sender, receiver, amt, "blocked", "Receiver is suspicious"],
+      );
 
-    if (senderUser.length === 0) {
       return res.json({
-        status: "failed",
-        message: "Sender not found",
+        status: "blocked",
+        message: "Transaction blocked",
+        reason: "Receiver is suspicious",
       });
     }
 
-    // receiver fetch
+    // =========================
+    // FETCH USERS
+    // =========================
+    const [senderUser] = await db.query("SELECT * FROM users WHERE upiId = ?", [
+      sender,
+    ]);
     const [receiverUser] = await db.query(
       "SELECT * FROM users WHERE upiId = ?",
       [receiver],
     );
 
-    if (receiverUser.length === 0) {
-      return res.json({
-        status: "failed",
-        message: "Receiver not found",
-      });
-    }
+    if (senderUser.length === 0)
+      return res.json({ status: "failed", message: "Sender not found" });
+
+    if (receiverUser.length === 0)
+      return res.json({ status: "failed", message: "Receiver not found" });
 
     const senderData = senderUser[0];
-    // const percentage = (amt / senderData.balance) * 100;
+    const senderBalance = senderData.balance;
 
-    // balance check
-    if (senderData.balance < amt) {
+    if (senderBalance < amt) {
       return res.json({
         status: "failed",
         message: "Insufficient balance",
@@ -133,15 +163,42 @@ app.post("/send-money", async (req, res) => {
     }
 
     // =========================
-    // FRAUD CHECK (basic for now)
+    // CHECK IF NEW RECEIVER
+    // =========================
+    const [prevTransactions] = await db.query(
+      "SELECT * FROM transactions WHERE sender = ? AND receiver = ?",
+      [sender, receiver],
+    );
+
+    const is_new_receiver = prevTransactions.length === 0 ? 1 : 0;
+
+    // =========================
+    // ML CHECK
+    // =========================
+    let mlResult = { status: "normal" };
+
+    try {
+      mlResult = await checkML({
+        sender,
+        receiver,
+        amount: amt,
+        sender_balance: senderBalance, // ✅ FIXED
+        is_new_receiver,
+      });
+    } catch (err) {
+      console.log("ML error:", err.message);
+    }
+
+    // =========================
+    // ML DECISION
     // =========================
 
-    let isBlocked = false;
-    let isWarning = false;
-    let reason = "";
-
-    // example rule: high amount
-    if (amt > senderData.balance * 0.5 || amt > 5000) {
+    // 🔐 Medium + High Risk → OTP
+    if (
+      amt > 0.5 * senderBalance ||
+      mlResult.status === "medium_risk" ||
+      mlResult.status === "high_risk"
+    ) {
       const otp = Math.floor(100000 + Math.random() * 900000);
 
       otpStore[sender] = {
@@ -152,84 +209,34 @@ app.post("/send-money", async (req, res) => {
         time: Date.now(),
       };
 
-      console.log("OTP:", otp);
+      console.log("OTP generated:", otp);
 
       return res.json({
         status: "otp_required",
-        message: "OTP required",
-        otp: otp,
+        message: "OTP required (ML Risk)",
+        otp,
+        riskScore: mlResult.score,
       });
     }
 
-    // example rule: fake blocklist
-if (receiver.includes("sanyuktasinha124@upi")) {
-  await db.query(
-    "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
-    [sender, receiver, amt, "blocked", "Receiver is suspicious"]
-  );
-
-  return res.json({
-    status: "blocked",
-    message: "Transaction blocked",
-    reason: "Receiver is suspicious",
-  });
-}
-
     // =========================
-    // BLOCKED CASE
-    // =========================
-if (isBlocked) {
-  await db.query(
-    "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
-    [sender, receiver, amt, "Amount too high", reason]
-  );
-
-
-  return res.json({
-    status: "blocked",
-    message: "Transaction too large",
-    reason: reason,
-  });
-}
-
-    // =========================
-    // TRANSACTION EXECUTION
+    // NORMAL TRANSACTION (LOW RISK)
     // =========================
 
-    // deduct sender
     await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
       amt,
       sender,
     ]);
 
-    // add receiver
     await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
       amt,
       receiver,
     ]);
 
-await db.query(
-  "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
-  [sender, receiver, amt, "success", "Normal transaction"]
-);
-
-    // insert transaction
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, time) VALUES (?, ?, ?, NOW())",
-      [sender, receiver, amt],
+      "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+      [sender, receiver, amt, "success", "ML: Low risk transaction"],
     );
-
-    // =========================
-    // RESPONSE
-    // =========================
-
-    if (isWarning) {
-      return res.json({
-        status: "warning",
-        message: "Transaction successful",
-        reason: reason,
-      });
-    }
 
     return res.json({
       status: "success",
@@ -237,7 +244,7 @@ await db.query(
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({
+    return res.status(500).json({
       status: "failed",
       message: "Server error",
     });
@@ -324,7 +331,7 @@ app.get("/user/:email", async (req, res) => {
 app.get("/fraud-transactions", async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT * FROM transactions WHERE status = 'blocked' ORDER BY time DESC"
+      "SELECT * FROM transactions WHERE status = 'blocked' ORDER BY time DESC",
     );
 
     res.json(rows);
@@ -361,16 +368,16 @@ app.post("/verify-otp", async (req, res) => {
     // =========================
 
     // 🔻 Deduct sender balance
-    await db.query(
-      "UPDATE users SET balance = balance - ? WHERE upiId = ?",
-      [data.amount, data.sender]
-    );
+    await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
+      data.amount,
+      data.sender,
+    ]);
 
     // 🔺 Add receiver balance
-    await db.query(
-      "UPDATE users SET balance = balance + ? WHERE upiId = ?",
-      [data.amount, data.receiver]
-    );
+    await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
+      data.amount,
+      data.receiver,
+    ]);
 
     // =========================
     // SAVE TRANSACTION (UPDATED)
@@ -384,7 +391,7 @@ app.post("/verify-otp", async (req, res) => {
         data.amount,
         "success",
         "High amount - OTP verified",
-      ]
+      ],
     );
 
     // =========================

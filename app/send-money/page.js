@@ -17,130 +17,108 @@ export default function SendMoney() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
-  // const [receiver, setReceiver] = useState("");
   const searchParams = useSearchParams();
+  const wrapperRef = useRef(null);
+  const [riskScore, setRiskScore] = useState(null);
 
+  // Load UPI from QR params
   useEffect(() => {
     const receiverFromQR = searchParams.get("receiver");
-
-    if (receiverFromQR) {
-      setReceiver(receiverFromQR);
-    }
+    if (receiverFromQR) setReceiver(receiverFromQR);
   }, [searchParams]);
 
-  const wrapperRef = useRef(null);
-
-  // 🔹 Load recent UPI suggestions
+  // Load recent UPI suggestions
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("recentUpi")) || [];
     setSuggestions(data);
   }, []);
 
-  // 🔹 Save recent UPI
+  // Save recent UPI
   const saveRecent = (upi) => {
     let list = JSON.parse(localStorage.getItem("recentUpi")) || [];
-
-    if (!list.includes(upi)) {
-      list.unshift(upi);
-    }
-
-    if (list.length > 5) list = list.slice(0, 5);
-
+    list = list.filter((item) => item !== upi); // remove duplicate
+    list.unshift(upi); // add on top
+    list = list.slice(0, 5); // limit 5
     localStorage.setItem("recentUpi", JSON.stringify(list));
+    setSuggestions(list);
   };
 
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
-
-    setTimeout(() => {
-      setToast({ show: false, message: "", type: "" });
-    }, 2500);
+    setTimeout(() => setToast({ show: false, message: "", type: "" }), 2500);
   };
 
-  // 🔹 Hide on outside click
+  // Hide suggestions on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
         setShowSuggestions(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSend = async () => {
-    if (!user) {
-      alert("User not loaded");
-      return;
-    }
+  async function handleSend() {
+    if (!user) return alert("User not loaded");
 
-    const sender =
-      user?.primaryEmailAddress?.emailAddress.split("@")[0] + "@upi";
+    const sender = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
 
-    if (!receiver || !amount) {
-      alert("Please fill all fields");
-      return;
-    }
+    if (!receiver || !amount) return alert("Please fill all fields");
+    const senderBalance = user.balance;
 
     try {
       const res = await fetch("http://localhost:5000/send-money", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sender: sender,
-          receiver: receiver,
+          sender,
+          receiver,
           amount: Number(amount),
+          sender_balance: senderBalance,
         }),
       });
 
-      const data = await res.json();
-      // OTP required
+      let data;
+
+      try {
+        data = await res.json();
+      } catch (err) {
+        const text = await res.text();
+        console.log("NON-JSON RESPONSE:", text);
+        throw new Error("Server returned invalid response");
+      }
+
+      // Save receiver regardless of transaction status
+      saveRecent(receiver);
+
       if (data.status === "otp_required") {
         setShowOtp(true);
         setGeneratedOtp(data.otp);
+        setRiskScore(data.riskScore);
         return;
       }
 
       if (data.status === "success") {
         showToast("Transaction successful", "success");
-        const audio = new Audio("/sucess.mp3");
-        audio.play().catch(() => {});
-        saveRecent(receiver);
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 2000);
+        new Audio("/sucess.mp3").play().catch(() => {});
       } else if (data.status === "warning") {
         showToast(data.reason, "warning");
-        const audio = new Audio("/sucess.mp3");
-        audio.play().catch(() => {});
-        saveRecent(receiver);
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 2000);
+        new Audio("/sucess.mp3").play().catch(() => {});
       } else if (data.status === "blocked") {
         showToast(data.reason, "error");
-        const audio = new Audio("/failed.mp3");
-        audio.play().catch(() => {});
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 1500);
+        new Audio("/failed.mp3").play().catch(() => {});
       } else {
         showToast(data.message || "Transaction failed", "error");
       }
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
+
+      setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err) {
       console.error(err);
       alert("❌ Server error");
+      setTimeout(() => router.push("/dashboard"), 1500);
     }
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1500);
-  };
+  }
 
   const handleVerifyOtp = async () => {
     if (!user) return;
@@ -150,32 +128,23 @@ export default function SendMoney() {
     try {
       const res = await fetch("http://localhost:5000/verify-otp", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sender: sender,
-          otp: Number(otp),
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender, otp: Number(otp) }),
       });
 
       const data = await res.json();
 
       if (data.status === "success") {
         showToast("Transaction successful", "success");
-        const audio = new Audio("/sucess.mp3");
-        audio.play().catch(() => {});
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 2000);
+        new Audio("/sucess.mp3").play().catch(() => {});
+        setTimeout(() => router.push("/dashboard"), 2000);
       } else {
         alert(data.message);
       }
     } catch (err) {
       console.log(err);
       showToast("Error verifying OTP", "error");
-      const audio = new Audio("/failed.mp3");
-        audio.play().catch(() => {});
+      new Audio("/failed.mp3").play().catch(() => {});
     }
   };
 
@@ -183,12 +152,11 @@ export default function SendMoney() {
     <div className="widht-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Navbar />
 
-      <div className=" bg-gradient-to-br from-purple-50 to-blue-100 flex items-center justify-center p-6 m-20">
+      <div className="bg-gradient-to-br from-purple-50 to-blue-100 flex items-center justify-center p-6 m-20">
         <div
           ref={wrapperRef}
           className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6"
         >
-          {/* Header */}
           <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
             Send Money
           </h2>
@@ -198,7 +166,6 @@ export default function SendMoney() {
             <label className="block text-gray-600 text-sm mb-1">
               Receiver UPI ID
             </label>
-
             <input
               type="text"
               placeholder="example@upi"
@@ -207,22 +174,20 @@ export default function SendMoney() {
                 const value = e.target.value;
                 setReceiver(value);
 
-                // ✅ Only show if match found
-                const match = suggestions.filter((upi) =>
+                // Fetch fresh list & filter
+                const allRecent =
+                  JSON.parse(localStorage.getItem("recentUpi")) || [];
+                const match = allRecent.filter((upi) =>
                   upi.toLowerCase().includes(value.toLowerCase()),
                 );
-
-                if (value && match.length > 0) {
-                  setShowSuggestions(true);
-                } else {
-                  setShowSuggestions(false);
-                }
+                setSuggestions(match);
+                setShowSuggestions(match.length > 0);
               }}
               onFocus={() => {
-                // show only if already typed & match exists
-                if (receiver && suggestions.includes(receiver)) {
-                  setShowSuggestions(true);
-                }
+                const allRecent =
+                  JSON.parse(localStorage.getItem("recentUpi")) || [];
+                setSuggestions(allRecent);
+                setShowSuggestions(allRecent.length > 0);
               }}
               className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900"
             />
@@ -230,23 +195,19 @@ export default function SendMoney() {
             {/* Suggestions */}
             {showSuggestions && (
               <div className="mt-2 bg-white rounded-lg p-2 shadow-md border">
-                {suggestions
-                  .filter((upi) =>
-                    upi.toLowerCase().includes(receiver.toLowerCase()),
-                  )
-                  .map((upi, index) => (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        setReceiver(upi);
-                        setShowSuggestions(false);
-                      }}
-                      className="cursor-pointer text-sm text-blue-600 hover:bg-blue-100 px-2 py-1 rounded flex justify-between"
-                    >
-                      <span>{upi}</span>
-                      <span className="text-gray-400 text-xs">used before</span>
-                    </div>
-                  ))}
+                {suggestions.map((upi, index) => (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      setReceiver(upi);
+                      setShowSuggestions(false);
+                    }}
+                    className="cursor-pointer text-sm text-blue-600 hover:bg-blue-100 px-2 py-1 rounded flex justify-between"
+                  >
+                    <span>{upi}</span>
+                    <span className="text-gray-400 text-xs">Suggestions</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -273,31 +234,43 @@ export default function SendMoney() {
             Send Money
           </button>
 
+          {/* OTP Modal */}
           {showOtp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
-              {/* Background Overlay */}
               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeOverlay" />
-
-              {/* Modal */}
               <div className="relative bg-white w-[380px] rounded-2xl shadow-2xl p-6 animate-scaleIn">
-                {/* Title */}
                 <h2 className="text-xl font-semibold text-gray-800 mb-1">
                   OTP Verification
                 </h2>
+                {riskScore !== null && (
+                  <div className="mb-3">
+                    <div className="text-sm text-gray-600 mb-1">
+                      Risk: {riskScore}%
+                    </div>
 
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          riskScore > 60
+                            ? "bg-red-500"
+                            : riskScore > 30
+                              ? "bg-yellow-400"
+                              : "bg-green-500"
+                        }`}
+                        style={{ width: `${riskScore}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
                 <p className="text-sm text-gray-500 mb-4">
                   Secure your transaction with OTP
                 </p>
-
-                {/* OTP Display */}
                 <div className="bg-indigo-50 text-indigo-600 text-sm p-2 rounded-md text-center mb-4">
                   OTP:{" "}
                   <span className="font-bold tracking-widest">
                     {generatedOtp}
                   </span>
                 </div>
-
-                {/* Input */}
                 <input
                   type="text"
                   inputMode="numeric"
@@ -306,8 +279,6 @@ export default function SendMoney() {
                   onChange={(e) => setOtp(e.target.value)}
                   className="w-full border border-gray-300 p-2.5 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 transition"
                 />
-
-                {/* Buttons */}
                 <div className="flex gap-3">
                   <button
                     onClick={handleVerifyOtp}
@@ -315,7 +286,6 @@ export default function SendMoney() {
                   >
                     Verify
                   </button>
-
                   <button
                     onClick={() => {
                       setShowOtp(false);
@@ -331,17 +301,18 @@ export default function SendMoney() {
           )}
         </div>
       </div>
+
+      {/* Toast */}
       {toast.show && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
           <div
-            className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-500
-      ${
-        toast.type === "success"
-          ? "bg-green-600"
-          : toast.type === "warning"
-            ? "bg-yellow-500"
-            : "bg-red-600"
-      }`}
+            className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-500 ${
+              toast.type === "success"
+                ? "bg-green-600"
+                : toast.type === "warning"
+                  ? "bg-yellow-500"
+                  : "bg-red-600"
+            }`}
             style={{
               animation:
                 "toastSlide 0.4s ease, toastFade 2.5s ease 0.5s forwards",

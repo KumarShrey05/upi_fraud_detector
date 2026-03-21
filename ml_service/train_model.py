@@ -1,25 +1,49 @@
 import pandas as pd
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 import joblib
-import numpy as np
+import random
 
-data = {
-    "amount":[100,200,5000,10000,50,300,7000,15000,200],
-    "hour":[10,12,2,3,9,16,1,4,11],
-    "balance_ratio":[0.01,0.02,0.5,0.9,0.005,0.03,0.7,0.95,0.02],
-    "is_new_receiver":[0,0,1,1,0,0,1,1,0],
-    "label":[0,0,1,2,0,0,1,2,0]
-}
+data = []
 
-df = pd.DataFrame(data)
+for _ in range(10000):   # dataset size
+    amount = random.randint(10, 20000)
+    hour = random.randint(0, 23)
+    is_new_receiver = random.choice([0, 1])
 
-X = df.drop("label",axis=1)
+    sender_balance = random.randint(1000, 20000)
+    balance_ratio = amount / sender_balance
+
+    # RULES
+    if balance_ratio > 0.9:
+        label = 2  # High Risk
+    elif balance_ratio > 0.7:
+        label = 1  # Medium Risk
+    elif balance_ratio > 0.5 and is_new_receiver == 1:
+        label = 1  # Medium Risk (new receiver)
+    else:
+        label = 0  # Low Risk
+
+    data.append([amount, hour, balance_ratio, is_new_receiver, label])
+
+# Create DataFrame
+df = pd.DataFrame(data, columns=[
+    "amount",
+    "hour",
+    "balance_ratio",
+    "is_new_receiver",
+    "label"
+])
+
+# Split features & target
+X = df.drop("label", axis=1)
 y = df["label"]
 
-model = RandomForestClassifier()
+# Train model
+model = RandomForestClassifier(n_estimators=100)
+model.fit(X, y)
 
-model.fit(X,y)
+# Save model
+joblib.dump(model, "fraud_model.pkl")
 
-joblib.dump(model,"fraud_model.pkl")
-
-print("Model trained successfully")
+print("Model trained with 10000 rows")

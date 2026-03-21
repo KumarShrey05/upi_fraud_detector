@@ -64,18 +64,26 @@ export default function Dashboard() {
       .catch((err) => console.log(err));
   }, [user]);
 
-  useEffect(() => {
-    if (!isLoaded || !user) return;
+useEffect(() => {
+  if (!isLoaded || !user) return;
 
-    const upiId = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+  const upiId = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
 
+  const fetchBalance = () => {
     fetch(`http://localhost:5000/user/${upiId}`)
       .then((res) => res.json())
       .then((data) => {
         setBalance(data.balance);
       })
       .catch((err) => console.log(err));
-  }, [isLoaded, user]);
+  };
+
+  fetchBalance(); // first call
+
+  const interval = setInterval(fetchBalance, 1000);
+
+  return () => clearInterval(interval); // cleanup
+}, [isLoaded, user]);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
