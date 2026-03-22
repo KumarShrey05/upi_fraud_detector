@@ -149,7 +149,7 @@ export default function SendMoney() {
   };
 
   return (
-    <div className="widht-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-6">
       <Navbar />
 
       <div className="bg-gradient-to-br from-purple-50 to-blue-100 flex items-center justify-center p-6 m-20">
@@ -304,19 +304,15 @@ export default function SendMoney() {
 
       {/* Toast */}
       {toast.show && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
           <div
-            className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-500 ${
-              toast.type === "success"
-                ? "bg-green-600"
-                : toast.type === "warning"
-                  ? "bg-yellow-500"
-                  : "bg-red-600"
-            }`}
-            style={{
-              animation:
-                "toastSlide 0.4s ease, toastFade 2.5s ease 0.5s forwards",
-            }}
+className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium animate-toast ${
+  toast.type === "success"
+    ? "bg-green-600"
+    : toast.type === "warning"
+      ? "bg-yellow-500"
+      : "bg-red-600"
+}`}
           >
             {toast.message}
           </div>

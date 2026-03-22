@@ -3,11 +3,44 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@clerk/nextjs";
+import { io } from "socket.io-client";
 
 export default function Transactions() {
   const { user, isLoaded } = useUser();
   const [transactions, setTransactions] = useState([]);
 
+  // Register user in backend
+useEffect(() => {
+  if (!user) return;
+
+  const socket = io("http://localhost:5000");
+
+  const upiId =
+    user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+
+  // join room
+  socket.emit("join", upiId);
+
+  const fetchTransactions = () => {
+    fetch(`http://localhost:5000/transactions/${upiId}`)
+      .then((res) => res.json())
+      .then((data) => setTransactions(data))
+      .catch((err) => console.log(err));
+  };
+
+  // first load
+  fetchTransactions();
+
+  // real-time update
+  socket.on("balanceUpdated", () => {
+    console.log("🔄 Transactions updating...");
+    fetchTransactions();
+  });
+
+  return () => socket.disconnect();
+}, [user]);
+
+  // Fetch transactions for the user
   useEffect(() => {
     if (!isLoaded || !user) return;
 

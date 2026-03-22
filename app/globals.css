@@ -80,7 +80,7 @@ body {
 /* TOAST ANIMATIONS */
 /* ========================= */
 
-@keyframes toastIn {
+/* @keyframes toastIn {
   from {
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
@@ -107,10 +107,10 @@ body {
     toastIn 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards,
     toastOut 0.8s cubic-bezier(0.4, 0, 0.2, 1) 2.5s forwards;
   will-change: transform, opacity;
-}
+} */
 
 /* ========================= */
-/* 🔥 SCANNER ANIMATIONS */
+/*  SCANNER ANIMATIONS */
 /* ========================= */
 
 @keyframes scanLine {
@@ -132,14 +132,40 @@ body {
   box-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
 }
 
-/* 🔥 Optional: subtle glowing frame */
+/*  Optional: subtle glowing frame */
 .scanner-frame {
   box-shadow: 0 0 0 2px white, 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
-/* 🔥 Optional: dark overlay (if needed later) */
+/*  Optional: dark overlay (if needed later) */
 .scanner-mask {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
+}
+
+/*  CLASSIC TOAST ANIMATION */
+
+@keyframes toastDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+.animate-toast {
+  animation: toastDrop 3s ease forwards;
+  will-change: transform, opacity;
 }

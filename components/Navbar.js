@@ -24,7 +24,7 @@ export default function Navbar() {
           Transactions
         </Link>
 
-        <Link href="/admin" className="text-blue-600 hover:shadow-2xs">
+        <Link href="/fraud-list" className="text-blue-600 hover:shadow-2xs">
           Fraud List
         </Link>
 

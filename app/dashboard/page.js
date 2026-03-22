@@ -6,10 +6,12 @@ import { useUser } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
 import Image from "next/image";
+import { io } from "socket.io-client";
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
   const [balance, setBalance] = useState(0);
+  const [notification, setNotification] = useState("");
   const router = useRouter();
   const [qr, setQr] = useState("");
 
@@ -64,30 +66,58 @@ export default function Dashboard() {
       .catch((err) => console.log(err));
   }, [user]);
 
-useEffect(() => {
-  if (!isLoaded || !user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  const upiId = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+    const socket = io("http://localhost:5000");
 
-  const fetchBalance = () => {
-    fetch(`http://localhost:5000/user/${upiId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setBalance(data.balance);
-      })
-      .catch((err) => console.log(err));
-  };
+    const upiId =
+      user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
 
-  fetchBalance(); // first call
+    socket.emit("join", upiId);
 
-  const interval = setInterval(fetchBalance, 1000);
+    socket.on("balanceUpdated", () => {
+      fetch(`http://localhost:5000/user/${upiId}`)
+        .then((res) => res.json())
+        .then((data) => setBalance(data.balance));
+    });
 
-  return () => clearInterval(interval); // cleanup
-}, [isLoaded, user]);
+    socket.on("paymentReceived", (data) => {
+      setNotification(`₹${data.amount} received from ${data.sender}`);
+      setTimeout(() => setNotification(""), 3000);
+    });
+
+    return () => socket.disconnect();
+  }, [user]);
+
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+
+    const upiId = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+
+    const fetchBalance = () => {
+      fetch(`http://localhost:5000/user/${upiId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setBalance(data.balance);
+        })
+        .catch((err) => console.log(err));
+    };
+    fetchBalance(); // first call
+    // cleanup
+  }, [isLoaded, user]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-6">
       <Navbar />
+
+      {notification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg animate-toast">
+            {notification}
+          </div>
+        </div>
+      )}
 
       {/* Welcome Text */}
       <h1 className="text-2xl font-semibold mb-2 text-gray-600">

@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import db from "./db.js";
-
+import { Server } from "socket.io";
+import http from "http";
 import fs from "fs";
 import csv from "csv-parser";
 import axios from "axios";
@@ -9,11 +10,18 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-async function checkML({ sender, receiver, amount, sender_balance, is_new_receiver }) {
+// ML Prediction function
+async function checkML({
+  sender,
+  receiver,
+  amount,
+  sender_balance,
+  is_new_receiver,
+}) {
   try {
     const res = await axios.post("http://localhost:8000/predict", {
       amount: amount,
-      sender_balance: sender_balance,   // ✅ ADD THIS
+      sender_balance: sender_balance, // ✅ ADD THIS
       is_new_receiver: is_new_receiver,
     });
 
@@ -22,10 +30,10 @@ async function checkML({ sender, receiver, amount, sender_balance, is_new_receiv
 
     console.log("ML Prediction:", risk);
 
-if (risk === "Medium Risk") return { status: "medium_risk", score };
-if (risk === "High Risk") return { status: "high_risk", score };
+    if (risk === "Medium Risk") return { status: "medium_risk", score };
+    if (risk === "High Risk") return { status: "high_risk", score };
 
-return { status: "normal", score };
+    return { status: "normal", score };
 
     return { status: "normal" };
   } catch (err) {
@@ -64,6 +72,7 @@ const generateUpiId = (email) => {
   return name.toLowerCase() + "@upi";
 };
 
+// Register user in backend
 app.post("/register", async (req, res) => {
   const { name, email } = req.body;
 
@@ -120,7 +129,7 @@ app.post("/send-money", async (req, res) => {
     }
 
     // =========================
-    // CSV FRAUD CHECK (BLOCK ONLY HERE)
+    // CSV FRAUD CHECK
     // =========================
     if (fraudUpis.includes(receiver.toLowerCase().trim())) {
       await db.query(
@@ -193,7 +202,7 @@ app.post("/send-money", async (req, res) => {
     // ML DECISION
     // =========================
 
-    // 🔐 Medium + High Risk → OTP
+    //  Medium + High Risk → OTP
     if (
       amt > 0.5 * senderBalance ||
       mlResult.status === "medium_risk" ||
@@ -238,6 +247,13 @@ app.post("/send-money", async (req, res) => {
       [sender, receiver, amt, "success", "ML: Low risk transaction"],
     );
 
+    io.to(sender).emit("balanceUpdated");
+    io.to(receiver).emit("balanceUpdated");
+    io.to(receiver).emit("paymentReceived", {
+      sender,
+      amount: amt,
+    });
+
     return res.json({
       status: "success",
       message: "Transaction successful",
@@ -251,6 +267,7 @@ app.post("/send-money", async (req, res) => {
   }
 });
 
+// Fetch all transactions (for admin)
 app.get("/transactions", (req, res) => {
   const sql = "SELECT * FROM transactions ORDER BY time DESC";
 
@@ -263,6 +280,7 @@ app.get("/transactions", (req, res) => {
   });
 });
 
+// Fetch transactions for a specific user
 app.get("/transactions/:upiId", async (req, res) => {
   const { upiId } = req.params;
 
@@ -290,6 +308,7 @@ app.get("/users", async (req, res) => {
   }
 });
 
+// Fetch user by UPI ID
 app.get("/user/:upiId", async (req, res) => {
   const { upiId } = req.params;
 
@@ -309,6 +328,7 @@ app.get("/user/:upiId", async (req, res) => {
   }
 });
 
+// NEW API: Fetch user by email
 app.get("/user/:email", async (req, res) => {
   const { email } = req.params;
 
@@ -328,6 +348,7 @@ app.get("/user/:email", async (req, res) => {
   }
 });
 
+// Fraud transactions API
 app.get("/fraud-transactions", async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -341,6 +362,7 @@ app.get("/fraud-transactions", async (req, res) => {
   }
 });
 
+// OTP Verification API
 app.post("/verify-otp", async (req, res) => {
   const { sender, otp } = req.body;
 
@@ -394,6 +416,13 @@ app.post("/verify-otp", async (req, res) => {
       ],
     );
 
+    io.to(data.sender).emit("balanceUpdated");
+    io.to(data.receiver).emit("balanceUpdated");
+    io.to(data.receiver).emit("paymentReceived", {
+      sender: data.sender,
+      amount: data.amount,
+    });
+
     // =========================
     // CLEANUP
     // =========================
@@ -420,6 +449,23 @@ app.post("/verify-otp", async (req, res) => {
 
 const PORT = 5000;
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("join", (upiId) => {
+    socket.join(upiId);
+    console.log(`✅ ${upiId} joined room`);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
