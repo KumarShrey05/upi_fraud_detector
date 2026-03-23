@@ -103,7 +103,7 @@ export default function Dashboard() {
         })
         .catch((err) => console.log(err));
     };
-    fetchBalance(); // first call
+    fetchBalance();
     // cleanup
   }, [isLoaded, user]);
 

@@ -77,39 +77,6 @@ body {
 }
 
 /* ========================= */
-/* TOAST ANIMATIONS */
-/* ========================= */
-
-/* @keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes toastOut {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-}
-
-.animate-toast {
-  animation: 
-    toastIn 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards,
-    toastOut 0.8s cubic-bezier(0.4, 0, 0.2, 1) 2.5s forwards;
-  will-change: transform, opacity;
-} */
-
-/* ========================= */
 /*  SCANNER ANIMATIONS */
 /* ========================= */
 
