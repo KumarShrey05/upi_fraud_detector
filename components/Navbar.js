@@ -1,36 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
   return (
-    <div className="bg-white shadow p-4 flex justify-between">
-      <h1 className="font-bold text-xl text-black hover:scale-120 transition duration-500">
-        <Link href="/dashboard">
-          UPay
-        </Link>
+    <div className="bg-[var(--card)] border-b border-[var(--border)] shadow p-4 flex justify-between items-center">
+      <h1 className="font-bold text-xl hover:scale-110 transition duration-300">
+        <Link href="/dashboard">UPay</Link>
       </h1>
 
-      <div className="flex gap-6 ">
-        <Link href="/dashboard" className="text-blue-600 hover:shadow-2xs">
+      <div className="flex items-center gap-6">
+        <Link href="/dashboard" className="hover:opacity-70">
           Dashboard
         </Link>
 
-        <Link href="/send-money" className="text-blue-600 hover:shadow-2xs">
+        <Link href="/send-money" className="hover:opacity-70">
           Send
         </Link>
 
-        <Link href="/transactions" className="text-blue-600 hover:shadow-2xs">
+        <Link href="/transactions" className="hover:opacity-70">
           Transactions
         </Link>
 
-        <Link href="/fraud-list" className="text-blue-600 hover:shadow-2xs">
+        <Link href="/fraud-list" className="hover:opacity-70">
           Fraud List
         </Link>
 
-        <Link href="/scan" className="text-blue-600 hover:shadow-2xs">
+        <Link href="/scan" className="hover:opacity-70">
           Scan
         </Link>
+
+        <ThemeToggle />
       </div>
     </div>
   );

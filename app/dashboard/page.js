@@ -108,7 +108,7 @@ export default function Dashboard() {
   }, [isLoaded, user]);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen bg-[var(--bg)] p-6">
       <Navbar />
 
       {notification && (
@@ -120,14 +120,14 @@ export default function Dashboard() {
       )}
 
       {/* Welcome Text */}
-      <h1 className="text-2xl font-semibold mb-2 text-gray-600">
+      <h1 className="text-2xl font-semibold mt-4 ml-1 text-gray-600">
         Welcome {user?.primaryEmailAddress?.emailAddress}
       </h1>
 
-      <h1 className="text-3xl font-bold mb-6 text-gray-500">Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-500 px-25 pt-6">Dashboard</h1>
 
       {/* Balance Card */}
-      <div className="bg-white shadow-lg rounded-xl p-6 w-80 mb-6 hover:shadow-2xl hover:scale-105 transition duration-300">
+      <div className="bg-white shadow-lg rounded-xl p-6 ml-5 w-80 mb-6 hover:shadow-2xl hover:scale-105 transition duration-300">
         <p className="text-sm text-gray-500 mb-2 text-center">
           {user?.primaryEmailAddress?.emailAddress.split("@")[0] + "@upi"}
         </p>
@@ -155,7 +155,7 @@ export default function Dashboard() {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 ml-8">
         <button
           onClick={() => router.push("/send-money")}
           className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition duration-300 ease-in-out"
