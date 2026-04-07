@@ -1,175 +1,281 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
-import { useUser } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
-import QRCode from "qrcode";
-import Image from "next/image";
-import { io } from "socket.io-client";
+import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { io } from 'socket.io-client';
 
-export default function Dashboard() {
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Topbar } from '@/components/layout/Topbar';
+import { BottomNav } from '@/components/layout/Bottom-nav';
+import { InsightCard } from '@/components/cards/Insight-card';
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
+
+  // Custom Tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-200">
+          <p className="text-xs text-gray-500 mb-1">{label}</p>
+          {payload.map((entry, index) => (
+            <p
+              key={index}
+              className="text-sm font-medium"
+              style={{ color: entry.color }}
+            >
+              {entry.name === 'sent' ? 'Sent' : 'Received'}: ₹{entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+export default function DashboardPage() {
   const { user, isLoaded } = useUser();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [balance, setBalance] = useState(0);
-  const [notification, setNotification] = useState("");
-  const router = useRouter();
-  const [qr, setQr] = useState("");
+  const [transactions, setTransactions] = useState([]);
 
-  // Register user in backend
-  useEffect(() => {
-    if (!isLoaded) return;
+  const [stats, setStats] = useState({
+    totalSent: 0,
+    totalReceived: 0,
+    securityScore: 98,
+  });
 
-    if (!user) {
-      console.log("User not loaded yet");
-      return;
-    }
-
-    const email = user.primaryEmailAddress?.emailAddress;
-
-    if (!email) {
-      console.log("Email not found");
-      return;
-    }
-
-    console.log("🔥 Registering user:", email);
-
-    const register = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/register", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            name: user.fullName || "User",
-          }),
-        });
-
-        const data = await res.json();
-        console.log("✅ Response:", data);
-      } catch (err) {
-        console.error("❌ Fetch error:", err);
-      }
-    };
-
-    register();
-  }, [isLoaded, user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const upiId = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
-
-    QRCode.toDataURL(upiId)
-      .then((url) => setQr(url))
-      .catch((err) => console.log(err));
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const socket = io("http://localhost:5000");
-
-    const upiId =
-      user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
-
-    socket.emit("join", upiId);
-
-    socket.on("balanceUpdated", () => {
-      fetch(`http://localhost:5000/user/${upiId}`)
-        .then((res) => res.json())
-        .then((data) => setBalance(data.balance));
-    });
-
-    socket.on("paymentReceived", (data) => {
-      setNotification(`₹${data.amount} received from ${data.sender}`);
-      setTimeout(() => setNotification(""), 3000);
-    });
-
-    return () => socket.disconnect();
-  }, [user]);
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
     if (!isLoaded || !user) return;
 
-    const upiId = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+    const upiId =
+      user.primaryEmailAddress.emailAddress.split('@')[0] +
+      '@upi';
 
-    const fetchBalance = () => {
-      fetch(`http://localhost:5000/user/${upiId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setBalance(data.balance);
-        })
-        .catch((err) => console.log(err));
+    const socket = io('http://localhost:5000');
+    socket.emit('join', upiId);
+
+    const fetchDashboardData = async () => {
+      try {
+        const userRes = await fetch(
+          `http://localhost:5000/user/${upiId}`
+        );
+        const userData = await userRes.json();
+
+        const txnRes = await fetch(
+          `http://localhost:5000/transactions/${upiId}`
+        );
+        const txnData = await txnRes.json();
+
+        setBalance(Number(userData.balance) || 0);
+        setTransactions(txnData || []);
+
+        const sent = txnData
+          .filter(
+            (txn) =>
+              txn.sender === upiId &&
+              txn.status === 'success'
+          )
+          .reduce(
+            (sum, txn) =>
+              sum + Number(txn.amount),
+            0
+          );
+
+        const received = txnData
+          .filter(
+            (txn) =>
+              txn.receiver === upiId &&
+              txn.status === 'success'
+          )
+          .reduce(
+            (sum, txn) =>
+              sum + Number(txn.amount),
+            0
+          );
+
+        setStats({
+          totalSent: sent,
+          totalReceived: received,
+          securityScore: 98,
+        });
+
+        const graphTransactions = txnData
+          .filter((txn) => txn.status === 'success')
+          .slice(0, 7)
+          .reverse()
+          .map((txn, index) => ({
+            date:
+              new Date(txn.time).toLocaleDateString(
+                'en-IN',
+                {
+                  day: 'numeric',
+                  month: 'short',
+                }
+              ) + `-${index + 1}`,
+            sent:
+              txn.sender === upiId
+                ? Number(txn.amount)
+                : 0,
+            received:
+              txn.receiver === upiId
+                ? Number(txn.amount)
+                : 0,
+          }));
+
+        setChartData(graphTransactions);
+      } catch (error) {
+        console.log(error);
+      }
     };
-    fetchBalance();
-    // cleanup
+
+    fetchDashboardData();
+    socket.on('balanceUpdated', fetchDashboardData);
+
+    return () => socket.disconnect();
   }, [isLoaded, user]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] p-6">
-      <Navbar />
+    <div className="flex flex-col md:flex-row min-h-screen bg-background">
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      {notification && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
-          <div className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg animate-toast">
-            {notification}
+      <div className="flex-1 flex flex-col md:ml-0">
+        <Topbar
+          onMenuClick={() =>
+            setSidebarOpen(!sidebarOpen)
+          }
+          userName={user?.firstName || 'User'}
+        />
+
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+          <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Overview of your financial activity
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <p className="text-muted-foreground text-sm font-medium">
+                  Account Balance
+                </p>
+                <p className="text-3xl font-bold mt-2">
+                  ₹{balance.toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <p className="text-muted-foreground text-sm font-medium">
+                  Total Sent
+                </p>
+                <p className="text-3xl font-bold mt-2">
+                  ₹{stats.totalSent.toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <p className="text-muted-foreground text-sm font-medium">
+                  Total Received
+                </p>
+                <p className="text-3xl font-bold mt-2">
+                  ₹{stats.totalReceived.toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <p className="text-muted-foreground text-sm font-medium">
+                  Security Score
+                </p>
+                <p className="text-3xl font-bold text-green-500 mt-2">
+                  {stats.securityScore}%
+                </p>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="text-lg font-bold mb-4">
+                Recent Transaction Trend
+              </h3>
+
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) =>
+                      value.split('-')[0]
+                    }
+                  />
+                  <YAxis />
+                  
+                  {/* ✅ Custom Tooltip */}
+                  <Tooltip content={<CustomTooltip />} />
+
+                  <Legend />
+
+                  <Line
+                    type="monotone"
+                    dataKey="sent"
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    isAnimationActive={true}
+      animationDuration={3000}
+      animationEasing="ease-in-out"
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="received"
+                    stroke="#22c55e"
+                    strokeWidth={2.5}
+                          isAnimationActive={true}
+      animationDuration={3000}
+      animationEasing="ease-in-out"
+      // animationBegin={1500}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <InsightCard
+                type="success"
+                title="Account Verified"
+                description="Your account has passed all security checks"
+                metric="✅ 100% Verified"
+              />
+
+              <InsightCard
+                type="info"
+                title="Recent Activity"
+                description="No suspicious activity detected in the last 30 days"
+                metric={`📊 ${transactions.length} Transactions`}
+              />
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Welcome Text */}
-      <h1 className="text-2xl font-semibold mt-4 ml-1 text-gray-600">
-        Welcome {user?.primaryEmailAddress?.emailAddress}
-      </h1>
-
-      <h1 className="text-3xl font-bold mb-6 text-gray-500 px-25 pt-6">Dashboard</h1>
-
-      {/* Balance Card */}
-      <div className="bg-white shadow-lg rounded-xl p-6 ml-5 w-80 mb-6 hover:shadow-2xl hover:scale-105 transition duration-300">
-        <p className="text-sm text-gray-500 mb-2 text-center">
-          {user?.primaryEmailAddress?.emailAddress.split("@")[0] + "@upi"}
-        </p>
-        <h2 className="text-lg font-semibold text-gray-600 text-center">
-          Available Balance
-        </h2>
-        {qr && (
-          <div className="mt-6 flex flex-col items-center">
-            <p className="text-gray-600 mb-2 font-medium">Scan to Pay</p>
-
-            <Image
-              src={qr}
-              alt="QR Code"
-              width={160}
-              height={160}
-              className="rounded-lg shadow-md"
-            />
-
-            <p className="text-sm text-gray-500 mt-2">Your UPI QR</p>
-          </div>
-        )}
-        <p className="text-3xl font-bold text-green-600 mt-2 text-center">
-          ₹{Number(balance).toLocaleString("en-IN")}
-        </p>
+        </main>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-4 ml-8">
-        <button
-          onClick={() => router.push("/send-money")}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition duration-300 ease-in-out"
-        >
-          Send Money
-        </button>
-
-        <button
-          onClick={() => router.push("/transactions")}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 hover:scale-105 active:scale-95 transition duration-300 ease-in-out"
-        >
-          Transactions
-        </button>
-      </div>
+      <BottomNav />
     </div>
   );
 }

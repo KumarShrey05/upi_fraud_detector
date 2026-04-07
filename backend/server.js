@@ -21,7 +21,7 @@ async function checkML({
   try {
     const res = await axios.post("http://localhost:8000/predict", {
       amount: amount,
-      sender_balance: sender_balance, // ✅ ADD THIS
+      sender_balance: sender_balance,
       is_new_receiver: is_new_receiver,
     });
 
@@ -35,7 +35,6 @@ async function checkML({
 
     return { status: "normal", score };
 
-    return { status: "normal" };
   } catch (err) {
     console.log("ML API error:", err.message);
     return { status: "normal" };
@@ -297,6 +296,52 @@ app.get("/transactions/:upiId", async (req, res) => {
   }
 });
 
+// Dashboard stats API
+app.get("/dashboard-stats/:upiId", async (req, res) => {
+  const { upiId } = req.params;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM transactions 
+       WHERE sender = ? OR receiver = ?
+       ORDER BY time DESC`,
+      [upiId, upiId]
+    );
+
+    const today = new Date().toDateString();
+
+    const todayTransactions = rows.filter(
+      (txn) => new Date(txn.time).toDateString() === today
+    );
+
+    const successful = rows.filter(
+      (txn) => txn.status === "success"
+    );
+
+    const blocked = rows.filter(
+      (txn) => txn.status === "blocked"
+    );
+
+    const sentTodayAmount = todayTransactions
+      .filter((txn) => txn.sender === upiId)
+      .reduce((sum, txn) => sum + Number(txn.amount), 0);
+
+    res.json({
+      totalTransactions: rows.length,
+      todayTransactions: todayTransactions.length,
+      successfulTransactions: successful.length,
+      blockedTransactions: blocked.length,
+      todaySpent: sentTodayAmount,
+      recentTransactions: rows.slice(0, 5),
+    });
+  } catch (err) {
+    console.log("Dashboard stats error:", err);
+    res.status(500).json({
+      message: "Error fetching dashboard stats",
+    });
+  }
+});
+
 //NEW API
 app.get("/users", async (req, res) => {
   try {
@@ -313,23 +358,30 @@ app.get("/user/:upiId", async (req, res) => {
   const { upiId } = req.params;
 
   try {
-    const [user] = await db.query("SELECT * FROM users WHERE upiId = ?", [
-      upiId,
-    ]);
+    const [user] = await db.query(
+      "SELECT * FROM users WHERE upiId = ?",
+      [upiId]
+    );
 
     if (user.length === 0) {
-      return res.json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+        balance: 0,
+      });
     }
 
     res.json(user[0]);
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Error fetching user" });
+    console.log("User fetch error:", err);
+    res.status(500).json({
+      message: "Error fetching user",
+      balance: 0,
+    });
   }
 });
 
-// NEW API: Fetch user by email
-app.get("/user/:email", async (req, res) => {
+// ✅ Fetch user by EMAIL
+app.get("/user/email/:email", async (req, res) => {
   const { email } = req.params;
 
   try {

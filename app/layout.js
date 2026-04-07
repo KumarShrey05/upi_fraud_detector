@@ -1,44 +1,38 @@
-"use client"; // Required because we are using ThemeProvider
-
-import { ClerkProvider } from "@clerk/nextjs";
-import { ThemeProvider } from "next-themes";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
-/* ========================= */
-/* GOOGLE FONTS */
-/* ========================= */
+import { ClerkProvider } from '@clerk/nextjs';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
-/* ========================= */
-/* ROOT LAYOUT */
-/* ========================= */
+export const metadata = {
+  title: 'Upay',
+  description:
+    'Upay is a UPI fraud detection dashboard built with Next.js, Tailwind CSS, and Clerk for authentication. It provides real-time insights into your transactions, helping you identify and prevent fraudulent activities.',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          {/* ThemeProvider wraps all children */}
-          <ThemeProvider
-            attribute="class"           // toggles `dark` class
-            defaultTheme="system"       // system default
-            enableSystem                 // respect OS preference
-            disableTransitionOnChange   // avoid flicker
-          >
-            {children}
-          </ThemeProvider>
+          {children}
         </body>
       </html>
     </ClerkProvider>
