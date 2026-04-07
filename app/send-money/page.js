@@ -1,323 +1,261 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
-import { useSearchParams } from "next/navigation";
+import { useState } from 'react';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Topbar } from '@/components/layout/Topbar';
+import { BottomNav } from '@/components/layout/Bottom-nav';
+import { RiskBar } from '@/components/cards/Risk-bar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertCircle } from 'lucide-react';
 
-export default function SendMoney() {
-  const { user } = useUser();
-  const router = useRouter();
-  const [showOtp, setShowOtp] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState(null);
-  const [receiver, setReceiver] = useState("");
-  const [amount, setAmount] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const [toast, setToast] = useState({ show: false, message: "", type: "" });
-  const searchParams = useSearchParams();
-  const wrapperRef = useRef(null);
-  const [riskScore, setRiskScore] = useState(null);
+export default function SendMoneyPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [upiId, setUpiId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [riskScore, setRiskScore] = useState(0);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [isBlocked, setIsBlocked] = useState(false);
 
-  // Load UPI from QR params
-  useEffect(() => {
-    const receiverFromQR = searchParams.get("receiver");
-    if (receiverFromQR) setReceiver(receiverFromQR);
-  }, [searchParams]);
+  const calculateRisk = (upi, amt) => {
+    if (!upi || !amt) return 0;
 
-  // Load recent UPI suggestions
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("recentUpi")) || [];
-    setSuggestions(data);
-  }, []);
+    let risk = Math.random() * 40; // Base risk
 
-  // Save recent UPI
-  const saveRecent = (upi) => {
-    let list = JSON.parse(localStorage.getItem("recentUpi")) || [];
-    list = list.filter((item) => item !== upi); // remove duplicate
-    list.unshift(upi); // add on top
-    list = list.slice(0, 5); // limit 5
-    localStorage.setItem("recentUpi", JSON.stringify(list));
-    setSuggestions(list);
-  };
-
-  const showToast = (message, type = "success") => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: "", type: "" }), 2500);
-  };
-
-  // Hide suggestions on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  async function handleSend() {
-    if (!user) return alert("User not loaded");
-
-    const sender = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
-
-    if (!receiver || !amount) return alert("Please fill all fields");
-    const senderBalance = user.balance;
-
-    try {
-      const res = await fetch("http://localhost:5000/send-money", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sender,
-          receiver,
-          amount: Number(amount),
-          sender_balance: senderBalance,
-        }),
-      });
-
-      let data;
-
-      try {
-        data = await res.json();
-      } catch (err) {
-        const text = await res.text();
-        console.log("NON-JSON RESPONSE:", text);
-        throw new Error("Server returned invalid response");
-      }
-
-      // Save receiver regardless of transaction status
-      saveRecent(receiver);
-
-      if (data.status === "otp_required") {
-        setShowOtp(true);
-        setGeneratedOtp(data.otp);
-        setRiskScore(data.riskScore);
-        return;
-      }
-
-      if (data.status === "success") {
-        showToast("Transaction successful", "success");
-        new Audio("/sucess.mp3").play().catch(() => {});
-      } else if (data.status === "warning") {
-        showToast(data.reason, "warning");
-        new Audio("/sucess.mp3").play().catch(() => {});
-      } else if (data.status === "blocked") {
-        showToast(data.reason, "error");
-        new Audio("/failed.mp3").play().catch(() => {});
-      } else {
-        showToast(data.message || "Transaction failed", "error");
-      }
-
-      setTimeout(() => router.push("/dashboard"), 1500);
-    } catch (err) {
-      console.error(err);
-      alert("❌ Server error");
-      setTimeout(() => router.push("/dashboard"), 1500);
+    // Check if UPI is in fraud list
+    if (
+      upi.toLowerCase().includes('fraud') ||
+      upi.toLowerCase().includes('fake')
+    ) {
+      risk += 50;
+      setIsBlocked(true);
+    } else {
+      setIsBlocked(false);
     }
-  }
 
-  const handleVerifyOtp = async () => {
-    if (!user) return;
+    // Large amount increases risk
+    if (parseInt(amt) > 10000) {
+      risk += 20;
+    }
 
-    const sender = user.primaryEmailAddress.emailAddress.split("@")[0] + "@upi";
+    return Math.min(risk, 100);
+  };
 
-    try {
-      const res = await fetch("http://localhost:5000/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender, otp: Number(otp) }),
-      });
+  const handleAmountChange = (e) => {
+    const value = e.target.value;
+    setAmount(value);
+    if (upiId) {
+      setRiskScore(calculateRisk(upiId, value));
+    }
+  };
 
-      const data = await res.json();
+  const handleUpiChange = (e) => {
+    const value = e.target.value;
+    setUpiId(value);
+    if (amount) {
+      setRiskScore(calculateRisk(value, amount));
+    }
+  };
 
-      if (data.status === "success") {
-        showToast("Transaction successful", "success");
-        new Audio("/sucess.mp3").play().catch(() => {});
-        setTimeout(() => router.push("/dashboard"), 2000);
-      } else {
-        alert(data.message);
-      }
-    } catch (err) {
-      console.log(err);
-      showToast("Error verifying OTP", "error");
-      new Audio("/failed.mp3").play().catch(() => {});
+  const handleSendMoney = () => {
+    if (isBlocked) {
+      return;
+    }
+    if (riskScore > 60) {
+      setShowOTP(true);
+    } else {
+      alert('Money sent successfully!');
+      setUpiId('');
+      setAmount('');
+      setRiskScore(0);
+    }
+  };
+
+  const handleOTPVerify = () => {
+    if (otp.length === 6) {
+      alert('OTP verified! Money sent successfully!');
+      setShowOTP(false);
+      setOtp('');
+      setUpiId('');
+      setAmount('');
+      setRiskScore(0);
     }
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-6">
-      <Navbar />
+    <div className="flex flex-col md:flex-row min-h-screen bg-background">
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="bg-gradient-to-br from-purple-50 to-blue-100 flex items-center justify-center p-6 m-20">
-        <div
-          ref={wrapperRef}
-          className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6"
-        >
-          <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
-            Send Money
-          </h2>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col md:ml-0">
+        {/* Topbar */}
+        <Topbar
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          userName="Arjun"
+        />
 
-          {/* Receiver Input */}
-          <div className="mb-4">
-            <label className="block text-gray-600 text-sm mb-1">
-              Receiver UPI ID
-            </label>
-            <input
-              type="text"
-              placeholder="example@upi"
-              value={receiver}
-              onChange={(e) => {
-                const value = e.target.value;
-                setReceiver(value);
-
-                // Fetch fresh list & filter
-                const allRecent =
-                  JSON.parse(localStorage.getItem("recentUpi")) || [];
-                const match = allRecent.filter((upi) =>
-                  upi.toLowerCase().includes(value.toLowerCase()),
-                );
-                setSuggestions(match);
-                setShowSuggestions(match.length > 0);
-              }}
-              onFocus={() => {
-                const allRecent =
-                  JSON.parse(localStorage.getItem("recentUpi")) || [];
-                setSuggestions(allRecent);
-                setShowSuggestions(allRecent.length > 0);
-              }}
-              className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900"
-            />
-
-            {/* Suggestions */}
-            {showSuggestions && (
-              <div className="mt-2 bg-white rounded-lg p-2 shadow-md border">
-                {suggestions.map((upi, index) => (
-                  <div
-                    key={index}
-                    onClick={() => {
-                      setReceiver(upi);
-                      setShowSuggestions(false);
-                    }}
-                    className="cursor-pointer text-sm text-blue-600 hover:bg-blue-100 px-2 py-1 rounded flex justify-between"
-                  >
-                    <span>{upi}</span>
-                    <span className="text-gray-400 text-xs">Suggestions</span>
-                  </div>
-                ))}
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-0 flex items-center justify-center">
+          <div className="w-full max-w-md p-4 sm:p-6">
+            {isBlocked && (
+              <div className="mb-6 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 flex gap-4">
+                <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-destructive">
+                    Transaction Blocked
+                  </h3>
+                  <p className="text-sm text-destructive mt-1">
+                    This UPI ID is flagged as fraudulent and has been blocked.
+                  </p>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Amount Input */}
-          <div className="mb-6">
-            <label className="block text-gray-600 text-sm mb-1">
-              Amount (₹)
-            </label>
-            <input
-              type="number"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-600"
-            />
-          </div>
-
-          {/* Button */}
-          <button
-            onClick={handleSend}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg font-semibold hover:scale-105 transition transform"
-          >
-            Send Money
-          </button>
-
-          {/* OTP Modal */}
-          {showOtp && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeOverlay" />
-              <div className="relative bg-white w-[380px] rounded-2xl shadow-2xl p-6 animate-scaleIn">
-                <h2 className="text-xl font-semibold text-gray-800 mb-1">
-                  OTP Verification
-                </h2>
-                {riskScore !== null && (
-                  <div className="mb-3">
-                    <div className="text-sm text-gray-600 mb-1">
-                      Risk: {riskScore}%
-                    </div>
-
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          riskScore > 60
-                            ? "bg-red-500"
-                            : riskScore > 30
-                              ? "bg-yellow-400"
-                              : "bg-green-500"
-                        }`}
-                        style={{ width: `${riskScore}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                <p className="text-sm text-gray-500 mb-4">
-                  Secure your transaction with OTP
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Send Money</h1>
+                <p className="text-muted-foreground mt-2">
+                  Transfer funds via UPI
                 </p>
-                <div className="bg-indigo-50 text-indigo-600 text-sm p-2 rounded-md text-center mb-4">
-                  OTP:{" "}
-                  <span className="font-bold tracking-widest">
-                    {generatedOtp}
-                  </span>
+              </div>
+
+              {/* Form Card */}
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                {/* UPI ID */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Recipient UPI ID
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="user@bank"
+                    value={upiId}
+                    onChange={handleUpiChange}
+                    disabled={isBlocked}
+                    className="rounded-lg"
+                  />
                 </div>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Enter 6-digit OTP"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  className="w-full border border-gray-300 p-2.5 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 transition"
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleVerifyOtp}
-                    className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 active:scale-95 transition-all duration-150"
-                  >
-                    Verify
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowOtp(false);
-                      router.push("/dashboard");
-                    }}
-                    className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-lg hover:bg-gray-200 active:scale-95 transition-all duration-150"
-                  >
-                    Cancel
-                  </button>
+
+                {/* Amount */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Amount (₹)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={amount}
+                    onChange={handleAmountChange}
+                    disabled={isBlocked}
+                    className="rounded-lg"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Note (Optional)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Add a note..."
+                    disabled={isBlocked}
+                    className="rounded-lg"
+                  />
                 </div>
               </div>
+
+              {/* Risk Assessment */}
+              {(upiId || amount) && (
+                <RiskBar
+                  score={Math.round(riskScore)}
+                  reason={
+                    riskScore > 60
+                      ? 'Large amount or new recipient'
+                      : undefined
+                  }
+                />
+              )}
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleSendMoney}
+                disabled={!upiId || !amount || isBlocked}
+                className="w-full h-12 rounded-lg font-semibold"
+              >
+                {isBlocked ? 'Transaction Blocked' : 'Send Money'}
+              </Button>
+
+              {/* Additional Info */}
+              <div className="space-y-2 p-4 rounded-lg bg-muted/50">
+                <p className="text-xs font-medium text-foreground">
+                  💡 Tips for safe transactions:
+                </p>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• Always verify the recipient UPI ID</li>
+                  <li>• Be cautious with new recipients</li>
+                  <li>• Large amounts may require OTP verification</li>
+                </ul>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        </main>
       </div>
 
-      {/* Toast */}
-      {toast.show && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50">
-          <div
-className={`w-full px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium animate-toast ${
-  toast.type === "success"
-    ? "bg-green-600"
-    : toast.type === "warning"
-      ? "bg-yellow-500"
-      : "bg-red-600"
-}`}
-          >
-            {toast.message}
+      {/* OTP Modal */}
+      <AlertDialog open={showOTP} onOpenChange={setShowOTP}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verify OTP</AlertDialogTitle>
+            <AlertDialogDescription>
+              This is a high-risk transaction. Please verify with OTP.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">
+                Recipient: {upiId}
+              </p>
+              <p className="text-sm font-medium text-foreground mb-2">
+                Amount: ₹{amount}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Enter OTP (6 digits)
+              </label>
+              <Input
+                type="text"
+                maxLength={6}
+                placeholder="000000"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                className="rounded-lg text-center text-2xl tracking-widest"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="flex gap-3">
+            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleOTPVerify}
+              disabled={otp.length !== 6}
+              className="rounded-lg"
+            >
+              Verify & Send
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bottom Nav */}
+      <BottomNav />
     </div>
   );
 }

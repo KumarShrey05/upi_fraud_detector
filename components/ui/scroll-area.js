@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils'
 function ScrollArea({
   className,
   children,
-  ...props}: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
+  ...props
+}) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -24,12 +25,14 @@ function ScrollArea({
       <ScrollBar />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
-  )}
+  )
+}
 
 function ScrollBar({
   className,
   orientation = 'vertical',
-  ...props}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+  ...props
+}) {
   return (
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       data-slot="scroll-area-scrollbar"
@@ -40,7 +43,8 @@ function ScrollBar({
           'h-full w-2.5 border-l border-l-transparent',
         orientation === 'horizontal' &&
           'h-2.5 flex-col border-t border-t-transparent',
-        className)}
+        className
+      )}
       {...props}
     >
       <ScrollAreaPrimitive.ScrollAreaThumb
@@ -48,6 +52,7 @@ function ScrollBar({
         className="bg-border relative flex-1 rounded-full"
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
-  )}
+  )
+}
 
 export { ScrollArea, ScrollBar }

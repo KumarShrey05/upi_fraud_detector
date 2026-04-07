@@ -1,13 +1,11 @@
 'use client'
 
-// Inspired by react-hot-toast library
 import * as React from 'react'
 import { ToastActionElement, ToastProps } from '@/components/ui/toast'
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-// Plain JS object equivalent of ToasterToast
 const addToRemoveQueue = (toastId) => {
   if (toastTimeouts.has(toastId)) {
     return
@@ -38,7 +36,6 @@ function genId() {
   return count.toString()
 }
 
-// Plain JS equivalents - action/dispatch handled as objects
 const toastTimeouts = new Map()
 
 export const reducer = (state, action) => {
@@ -60,8 +57,6 @@ export const reducer = (state, action) => {
     case 'DISMISS_TOAST': {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -82,6 +77,7 @@ export const reducer = (state, action) => {
         ),
       }
     }
+
     case 'REMOVE_TOAST':
       if (action.toastId === undefined) {
         return {
@@ -93,6 +89,9 @@ export const reducer = (state, action) => {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
+
+    default:
+      return state
   }
 }
 
@@ -107,7 +106,6 @@ function dispatch(action) {
   })
 }
 
-// Plain JS equivalent of Toast (Omit<ToasterToast, 'id'>)
 function toast(props) {
   const id = genId()
 
@@ -116,6 +114,7 @@ function toast(props) {
       type: 'UPDATE_TOAST',
       toast: { ...propsUpdate, id },
     })
+
   const dismiss = () => dispatch({ type: 'DISMISS_TOAST', toastId: id })
 
   dispatch({

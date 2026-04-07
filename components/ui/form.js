@@ -8,34 +8,23 @@ import {
   FormProvider,
   useFormContext,
   useFormState,
-  type ControllerProps,
-  type FieldPath,
-  type FieldValues} from 'react-hook-form'
+} from 'react-hook-form'
 
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 
 const Form = FormProvider
 
-type FormFieldContextValue<
-  TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> = {
-  name: TName}
+const FormFieldContext = React.createContext({})
+const FormItemContext = React.createContext({})
 
-const FormFieldContext = React.createContext<FormFieldContextValue>(
-  {} as FormFieldContextValue)
-
-const FormField = <
-  TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->({
-  ...props}: ControllerProps<TFieldValues, TName>) => {
+const FormField = ({ ...props }) => {
   return (
     <FormFieldContext.Provider value={{ name: props.name }}>
       <Controller {...props} />
     </FormFieldContext.Provider>
-  )}
+  )
+}
 
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
@@ -45,7 +34,8 @@ const useFormField = () => {
   const fieldState = getFieldState(fieldContext.name, formState)
 
   if (!fieldContext) {
-    throw new Error('useFormField should be used within <FormField>')}
+    throw new Error('useFormField should be used within <FormField>')
+  }
 
   const { id } = itemContext
 
@@ -55,15 +45,11 @@ const useFormField = () => {
     formItemId: `${id}-form-item`,
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
-    ...fieldState}}
+    ...fieldState,
+  }
+}
 
-type FormItemContextValue = {
-  id: string}
-
-const FormItemContext = React.createContext<FormItemContextValue>(
-  {} as FormItemContextValue)
-
-function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
+function FormItem({ className, ...props }) {
   const id = React.useId()
 
   return (
@@ -74,11 +60,10 @@ function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
         {...props}
       />
     </FormItemContext.Provider>
-  )}
+  )
+}
 
-function FormLabel({
-  className,
-  ...props}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function FormLabel({ className, ...props }) {
   const { error, formItemId } = useFormField()
 
   return (
@@ -89,10 +74,16 @@ function FormLabel({
       htmlFor={formItemId}
       {...props}
     />
-  )}
+  )
+}
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+function FormControl(props) {
+  const {
+    error,
+    formItemId,
+    formDescriptionId,
+    formMessageId,
+  } = useFormField()
 
   return (
     <Slot
@@ -101,13 +92,15 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
       aria-describedby={
         !error
           ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`}
+          : `${formDescriptionId} ${formMessageId}`
+      }
       aria-invalid={!!error}
       {...props}
     />
-  )}
+  )
+}
 
-function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
+function FormDescription({ className, ...props }) {
   const { formDescriptionId } = useFormField()
 
   return (
@@ -117,14 +110,16 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
       className={cn('text-muted-foreground text-sm', className)}
       {...props}
     />
-  )}
+  )
+}
 
-function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
+function FormMessage({ className, ...props }) {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? '') : props.children
 
   if (!body) {
-    return null}
+    return null
+  }
 
   return (
     <p
@@ -135,7 +130,8 @@ function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
     >
       {body}
     </p>
-  )}
+  )
+}
 
 export {
   useFormField,
@@ -145,4 +141,5 @@ export {
   FormControl,
   FormDescription,
   FormMessage,
-  FormField}
+  FormField,
+}
