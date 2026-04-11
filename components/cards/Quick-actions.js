@@ -13,7 +13,7 @@ const actions = [
   {
     label: 'Scan QR',
     icon: QrCode,
-    href: '#',
+    href: '/scan',
     color: 'from-purple-500 to-purple-600',
   },
   {

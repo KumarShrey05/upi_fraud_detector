@@ -48,11 +48,11 @@ export default function DashboardPage() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
 
-  const [stats, setStats] = useState({
-    totalSent: 0,
-    totalReceived: 0,
-    securityScore: 98,
-  });
+const [stats, setStats] = useState({
+  totalSent: 0,
+  totalReceived: 0,
+  securityScore: 100,
+});
 
   const [chartData, setChartData] = useState([]);
 
@@ -105,11 +105,34 @@ export default function DashboardPage() {
             0
           );
 
-        setStats({
-          totalSent: sent,
-          totalReceived: received,
-          securityScore: 98,
-        });
+const totalTxns = txnData.length;
+
+const blockedTxns = txnData.filter(
+  (txn) => txn.status === 'blocked'
+).length;
+
+const failedTxns = txnData.filter(
+  (txn) => txn.status === 'failed'
+).length;
+
+const riskyTxns = blockedTxns + failedTxns;
+
+let securityScore = 100;
+
+if (totalTxns > 0) {
+  securityScore = Math.max(
+    0,
+    Math.round(
+      ((totalTxns - riskyTxns) / totalTxns) * 100
+    )
+  );
+}
+
+setStats({
+  totalSent: sent,
+  totalReceived: received,
+  securityScore,
+});
 
         const graphTransactions = txnData
           .filter((txn) => txn.status === 'success')

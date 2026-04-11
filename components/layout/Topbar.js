@@ -1,8 +1,8 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Bell, User, Menu } from 'lucide-react';
 import { useState } from 'react';
+
 
 export function Topbar(props = {}) {
   const { onMenuClick, userName = 'User' } = props;
@@ -14,7 +14,7 @@ export function Topbar(props = {}) {
       <div className="flex items-center justify-between h-16 px-4 sm:px-6">
         <button
           onClick={onMenuClick}
-          className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors md:hidden"
         >
           <Menu className="w-5 h-5" />
         </button>

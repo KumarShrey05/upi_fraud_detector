@@ -240,3 +240,21 @@
   animation: toastDrop 3s ease forwards;
   will-change: transform, opacity;
 }
+
+#reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+#reader__scan_region,
+#reader__scan_region img,
+#reader__dashboard {
+  display: none !important;
+}
+
+#reader > div {
+  border: none !important;
+  box-shadow: none !important;
+}

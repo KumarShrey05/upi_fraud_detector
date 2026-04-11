@@ -73,7 +73,7 @@ const generateUpiId = (email) => {
 
 // Register user in backend
 app.post("/register", async (req, res) => {
-  const { name, email } = req.body;
+  const { name, email, phone, location } = req.body;
 
   const upiId = generateUpiId(email);
   console.log("API HIT:", req.body);
@@ -89,10 +89,19 @@ app.post("/register", async (req, res) => {
     }
 
     // create new user
-    await db.query(
-      "INSERT INTO users (name, email, upiId, balance) VALUES (?, ?, ?, ?)",
-      [name, email, upiId, 10000],
-    );
+await db.query(
+  `INSERT INTO users 
+   (name, email, phone, location, upiId, balance, created_at) 
+   VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+  [
+    name,
+    email,
+    phone || null,
+    location || null,
+    upiId,
+    10000,
+  ]
+);
 
     res.json({
       message: "User created",
@@ -266,6 +275,42 @@ app.post("/send-money", async (req, res) => {
   }
 });
 
+// Fetch user profile
+app.get("/api/user/profile/:upiId", async (req, res) => {
+  const { upiId } = req.params;
+
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT 
+        name,
+        email,
+        phone,
+        upiId,
+        location,
+        DATE_FORMAT(created_at, '%b %Y') AS joinDate
+      FROM users
+      WHERE upiId = ?
+      `,
+      [upiId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.log("Profile fetch error:", error);
+
+    res.status(500).json({
+      message: "Server error",
+    });
+  }
+});
+
 // Fetch all transactions (for admin)
 app.get("/transactions", (req, res) => {
   const sql = "SELECT * FROM transactions ORDER BY time DESC";
@@ -380,7 +425,28 @@ app.get("/user/:upiId", async (req, res) => {
   }
 });
 
-// ✅ Fetch user by EMAIL
+// Update user profile
+app.put("/user/:upiId", async (req, res) => {
+  const { upiId } = req.params;
+  const { phone, location } = req.body;
+
+  try {
+    await db.query(
+      "UPDATE users SET phone = ?, location = ? WHERE upiId = ?",
+      [phone, location, upiId]
+    );
+
+    res.json({
+      message: "Profile updated",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Update failed",
+    });
+  }
+});
+
+// Fetch user by EMAIL
 app.get("/user/email/:email", async (req, res) => {
   const { email } = req.params;
 
