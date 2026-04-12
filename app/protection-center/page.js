@@ -94,110 +94,124 @@ export default function FraudListPage() {
           <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
 
             {/* HERO */}
-            <div className="relative overflow-hidden rounded-[32px] border border-white/20 backdrop-blur-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8 shadow-2xl min-h-[320px]">
-              <div className="absolute top-10 right-10 w-44 h-44 rounded-full bg-white/10 blur-3xl" />
-              <div className="absolute bottom-10 left-10 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+<div className="relative overflow-hidden rounded-[28px] border border-white/20 backdrop-blur-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-5 sm:p-8 shadow-2xl min-h-auto md:min-h-[320px]">
+  <div className="absolute top-6 right-6 w-28 h-28 sm:w-44 sm:h-44 rounded-full bg-white/10 blur-3xl" />
+  <div className="absolute bottom-6 left-6 w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-white/10 blur-2xl" />
 
-              <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <p className="text-sm tracking-[0.3em] uppercase text-white/60">
-                    Fraud Protection Center
-                  </p>
+  <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+    <div>
+      <p className="text-xs sm:text-sm tracking-[0.25em] uppercase text-white/60">
+        Fraud Protection Center
+      </p>
 
-                  <div className="flex items-center gap-3 mt-4">
-                    <h1 className="text-4xl font-bold">
-                      Threat Level
-                    </h1>
+      <div className="flex items-center gap-3 mt-3 flex-wrap">
+        <h1 className="text-3xl sm:text-4xl font-bold">
+          Threat Level
+        </h1>
 
-                    <span className={`px-3 py-1 rounded-full text-sm ${getThreatColor()}`}>
-                      {insights?.threatLevel}
-                    </span>
-                  </div>
+        <span
+          className={`px-3 py-1 rounded-full text-sm font-medium ${getThreatColor()}`}
+        >
+          {insights?.threatLevel}
+        </span>
+      </div>
 
-                  <p className="mt-4 text-white/70 leading-7">
-                    Total monitored transactions: {insights?.totalCount || 0}<br />
-                    High risk transactions: {insights?.highRiskCount || 0}<br />
-                    Risk ratio: {insights?.riskRatio || 0}%<br />
-                    Avg suspicious amount: ₹{insights?.avgAmount || 0}
-                  </p>
+      <div className="mt-4 text-white/75 leading-7 text-sm sm:text-base">
+        <p>Total monitored transactions: {insights?.totalCount || 0}</p>
+        <p>High risk transactions: {insights?.highRiskCount || 0}</p>
+        <p>Risk ratio: {insights?.riskRatio || 0}%</p>
+        <p>Avg suspicious amount: ₹{insights?.avgAmount || 0}</p>
+      </div>
 
-                  <div className="flex gap-4 mt-6 flex-wrap">
-                    <GlassStat
-                      icon={<ShieldAlert />}
-                      label="Blocked"
-                      value={insights?.blockedCount || 0}
-                    />
-                    <GlassStat
-                      icon={<ShieldCheck />}
-                      label="Safe"
-                      value={insights?.safeCount || 0}
-                    />
-                    <GlassStat
-                      icon={<Sparkles />}
-                      label="OTP"
-                      value={insights?.otpCount || 0}
-                    />
-                  </div>
-                </div>
+      <div className="grid grid-cols-3 gap-3 mt-5">
+        <GlassStat
+          icon={<ShieldAlert className="w-4 h-4" />}
+          label="Blocked"
+          value={insights?.blockedCount || 0}
+        />
+        <GlassStat
+          icon={<ShieldCheck className="w-4 h-4" />}
+          label="Safe"
+          value={insights?.safeCount || 0}
+        />
+        <GlassStat
+          icon={<Sparkles className="w-4 h-4" />}
+          label="OTP"
+          value={insights?.otpCount || 0}
+        />
+      </div>
+    </div>
 
-                <div className="flex justify-center">
-                  <div className="relative w-52 h-52 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center shadow-2xl animate-pulse">
-                    <div className="absolute w-40 h-40 rounded-full border border-white/30" />
-                    <div className="absolute w-28 h-28 rounded-full border border-white/40" />
-                    <Shield className="w-14 h-14" />
-                  </div>
-                </div>
-              </div>
-            </div>
+    {/* SHOW ONLY ON DESKTOP */}
+    <div className="hidden md:flex justify-center">
+      <div className="relative w-52 h-52 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center shadow-2xl animate-pulse">
+        <div className="absolute w-40 h-40 rounded-full border border-white/30" />
+        <div className="absolute w-28 h-28 rounded-full border border-white/40" />
+        <Shield className="w-14 h-14" />
+      </div>
+    </div>
+  </div>
+</div>
 
             {/* ANALYTICS */}
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="rounded-3xl border p-6 bg-card shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-5 h-5" />
-                  <h2 className="text-xl font-semibold">
-                    Live Fraud Analytics
-                  </h2>
-                </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
 
-                <div className="space-y-4 text-sm">
-                  <StoryLine text={`${insights?.blockedCount || 0} blocked attempts`} />
-                  <StoryLine text={`${insights?.otpCount || 0} OTP verifications`} />
-                  <StoryLine text={`${insights?.highRiskCount || 0} high-risk transactions`} />
-                  <StoryLine text={`₹${insights?.totalAmount || 0} total monitored amount`} />
-                </div>
-              </div>
+  {/* LIVE ANALYTICS */}
+  <div className="rounded-3xl border p-4 sm:p-6 bg-card shadow-sm">
+    <div className="flex items-center gap-2 mb-4">
+      <Activity className="w-5 h-5" />
+      <h2 className="text-lg sm:text-xl font-semibold">
+        Live Fraud Analytics
+      </h2>
+    </div>
 
-              <div className="rounded-3xl border p-6 bg-card shadow-sm">
-                <h2 className="text-xl font-semibold mb-5">
-                  Protection Score
-                </h2>
+    <div className="space-y-3 text-sm">
+      <StoryLine
+        text={`${insights?.blockedCount || 0} blocked attempts`}
+      />
+      <StoryLine
+        text={`${insights?.otpCount || 0} OTP verifications`}
+      />
+      <StoryLine
+        text={`${insights?.highRiskCount || 0} high-risk transactions`}
+      />
+      <StoryLine
+        text={`₹${insights?.totalAmount || 0} total monitored amount`}
+      />
+    </div>
+  </div>
 
-                <p className="text-4xl font-bold mt-2">
-                  {insights?.protectionScore || 0}%
-                </p>
+  {/* PROTECTION SCORE */}
+  <div className="rounded-3xl border p-4 sm:p-6 bg-card shadow-sm">
+    <h2 className="text-lg sm:text-xl font-semibold mb-4">
+      Protection Score
+    </h2>
 
-                <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-3 rounded-full bg-primary transition-all duration-700"
-                    style={{
-                      width: `${insights?.protectionScore || 0}%`
-                    }}
-                  />
-                </div>
+    <p className="text-3xl sm:text-4xl font-bold mt-2">
+      {insights?.protectionScore || 0}%
+    </p>
 
-                <div className="mt-6 grid grid-cols-2 gap-4">
-                  <MiniMetric
-                    label="Total Amount"
-                    value={`₹${insights?.totalAmount || 0}`}
-                  />
-                  <MiniMetric
-                    label="Avg Amount"
-                    value={`₹${insights?.avgAmount || 0}`}
-                  />
-                </div>
-              </div>
-            </div>
+    <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
+      <div
+        className="h-3 rounded-full bg-primary transition-all duration-700"
+        style={{
+          width: `${insights?.protectionScore || 0}%`
+        }}
+      />
+    </div>
+
+    <div className="mt-5 grid grid-cols-2 gap-3">
+      <MiniMetric
+        label="Total Amount"
+        value={`₹${insights?.totalAmount || 0}`}
+      />
+      <MiniMetric
+        label="Avg Amount"
+        value={`₹${insights?.avgAmount || 0}`}
+      />
+    </div>
+  </div>
+</div>
 
             {/* LATEST */}
             <div className="rounded-3xl border p-6 bg-gradient-to-r from-background to-muted/40 shadow-sm">

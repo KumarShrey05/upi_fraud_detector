@@ -1,4 +1,6 @@
 timestamp,amount,sender_balance,balance_ratio,is_new_receiver,risk,risk_score,model_accuracy
+2026-04-13 01:29:45,1000.0,11000.0,0.09,0,Low Risk,0,1.0
+2026-04-13 01:29:06,1000.0,10000.0,0.1,0,Low Risk,0,1.0
 2026-04-12 06:45:08,5000.0,15000.0,0.33,0,Low Risk,0,1.0
 2026-04-12 06:44:38,2000.0,17000.0,0.12,0,Low Risk,0,1.0
 2026-04-12 06:44:30,2000.0,5000.0,0.4,0,Low Risk,0,1.0

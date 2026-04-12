@@ -1,33 +1,25 @@
 'use client';
 
-import { Bell, Menu, X } from 'lucide-react';
+import { Bell, Menu, X, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useUser } from '@clerk/nextjs';
 
 export function Topbar(props = {}) {
-  const {
-    onMenuClick,
-  } = props;
-
-  // Clerk user data
+  const { onMenuClick } = props;
   const { user, isLoaded } = useUser();
 
-const displayName =
-  isLoaded && user
-    ? user.fullName ||
-      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-      user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
-      'User'
-    : 'User';
+  const displayName =
+    isLoaded && user
+      ? user.fullName ||
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+        'User'
+      : 'User';
 
-  const [showNotifications, setShowNotifications] =
-    useState(false);
-
-  const [notifications, setNotifications] =
-    useState([]);
-
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const [toast, setToast] = useState({
     show: false,
     message: '',
@@ -35,15 +27,9 @@ const displayName =
   });
 
   const notificationRef = useRef(null);
+  const userInitial = displayName.charAt(0).toUpperCase();
 
-  const userInitial = displayName
-    .charAt(0)
-    .toUpperCase();
-
-  const showToastMessage = (
-    message,
-    type = 'success'
-  ) => {
+  const showToastMessage = (message, type = 'success') => {
     setToast({
       show: true,
       message,
@@ -59,16 +45,11 @@ const displayName =
     }, 2500);
   };
 
-  // =========================
-  // LOAD NOTIFICATIONS
-  // =========================
   useEffect(() => {
     const loadNotifications = () => {
       const saved =
         JSON.parse(
-          localStorage.getItem(
-            'notifications'
-          )
+          localStorage.getItem('notifications')
         ) || [];
 
       setNotifications(saved);
@@ -76,14 +57,10 @@ const displayName =
 
     loadNotifications();
 
-    const handleOutsideClick = (
-      event
-    ) => {
+    const handleOutsideClick = (event) => {
       if (
         notificationRef.current &&
-        !notificationRef.current.contains(
-          event.target
-        )
+        !notificationRef.current.contains(event.target)
       ) {
         setShowNotifications(false);
       }
@@ -112,9 +89,6 @@ const displayName =
     };
   }, []);
 
-  // =========================
-  // GLOBAL PAYMENT RECEIVE
-  // =========================
   useEffect(() => {
     const socket = io(
       'http://localhost:5000'
@@ -134,9 +108,7 @@ const displayName =
 
         const existing =
           JSON.parse(
-            localStorage.getItem(
-              'notifications'
-            )
+            localStorage.getItem('notifications')
           ) || [];
 
         const updated = [
@@ -156,11 +128,7 @@ const displayName =
         );
 
         setNotifications(updated);
-
-        showToastMessage(
-          message,
-          'success'
-        );
+        showToastMessage(message, 'success');
       }
     );
 
@@ -168,9 +136,7 @@ const displayName =
       socket.disconnect();
   }, []);
 
-  const clearNotification = (
-    id
-  ) => {
+  const clearNotification = (id) => {
     const updated =
       notifications.filter(
         (item) => item.id !== id
@@ -184,17 +150,15 @@ const displayName =
     );
   };
 
-  const clearAllNotifications =
-    () => {
-      setNotifications([]);
-      localStorage.removeItem(
-        'notifications'
-      );
-    };
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    localStorage.removeItem(
+      'notifications'
+    );
+  };
 
   return (
     <>
-      {/* Global Toast */}
       {toast.show && (
         <div className="fixed top-20 right-0 z-[9999] toast-edge-slide">
           <div
@@ -213,19 +177,37 @@ const displayName =
 
       <header className="sticky top-0 z-40 bg-card border-b border-border shadow-sm">
         <div className="flex items-center justify-between h-16 px-4 sm:px-6">
-          <button
-            onClick={onMenuClick}
-            className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition md:hidden"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
 
-          <div className="flex-1 flex justify-center md:justify-start">
-            <h1 className="text-lg font-semibold text-foreground">
+          {/* LEFT */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onMenuClick}
+              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition md:hidden"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* MOBILE BRAND */}
+            <Link
+              href="/"
+              className="flex items-center gap-2 md:hidden"
+            >
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-white" />
+              </div>
+
+              <span className="font-bold text-base">
+                UPay
+              </span>
+            </Link>
+
+            {/* DESKTOP WELCOME */}
+            <h1 className="hidden md:block text-lg font-semibold text-foreground">
               Welcome {displayName}
             </h1>
           </div>
 
+          {/* RIGHT */}
           <div className="flex items-center gap-3">
             <div
               className="relative"
@@ -241,8 +223,7 @@ const displayName =
               >
                 <Bell className="w-5 h-5" />
 
-                {notifications.length >
-                  0 && (
+                {notifications.length > 0 && (
                   <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
                 )}
               </button>
@@ -255,9 +236,7 @@ const displayName =
                     </h3>
 
                     <button
-                      onClick={
-                        clearAllNotifications
-                      }
+                      onClick={clearAllNotifications}
                       className="text-xs text-red-500 hover:underline"
                     >
                       Clear All
@@ -265,46 +244,35 @@ const displayName =
                   </div>
 
                   <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {notifications.length ===
-                    0 ? (
+                    {notifications.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No notifications
                       </p>
                     ) : (
-                      notifications.map(
-                        (item) => (
-                          <div
-                            key={
-                              item.id
-                            }
-                            className="p-3 rounded-lg bg-muted/50 flex justify-between"
-                          >
-                            <div>
-                              <p className="text-sm font-medium">
-                                {
-                                  item.message
-                                }
-                              </p>
+                      notifications.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-3 rounded-lg bg-muted/50 flex justify-between"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">
+                              {item.message}
+                            </p>
 
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {
-                                  item.time
-                                }
-                              </p>
-                            </div>
-
-                            <button
-                              onClick={() =>
-                                clearNotification(
-                                  item.id
-                                )
-                              }
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {item.time}
+                            </p>
                           </div>
-                        )
-                      )
+
+                          <button
+                            onClick={() =>
+                              clearNotification(item.id)
+                            }
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
