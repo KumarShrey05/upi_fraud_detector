@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@clerk/nextjs';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, ChevronRight } from 'lucide-react';
 
 export default function ContactsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,126 +18,191 @@ export default function ContactsPage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
-  const getUpiId = () =>
-    user?.primaryEmailAddress?.emailAddress.split('@')[0] + '@upi';
-
-  // ✅ FETCH TRANSACTIONS & GENERATE CONTACTS
   useEffect(() => {
     const fetchContacts = async () => {
-      if (!isLoaded || !user) return;
+      try {
+        if (!isLoaded || !user) {
+          setContacts([]);
+          return;
+        }
 
-      const res = await fetch(
-        `http://localhost:5000/transactions/${getUpiId()}`
-      );
-      const data = await res.json();
+        const email =
+          user.primaryEmailAddress?.emailAddress;
 
-      const map = {};
+        const profileRes = await fetch(
+          `http://localhost:5000/user/email/${encodeURIComponent(email)}`
+        );
 
-      data.forEach((t) => {
-        const other =
-          t.sender === getUpiId() ? t.receiver : t.sender;
+        const profileData =
+          await profileRes.json();
 
-        map[other] = (map[other] || 0) + 1;
-      });
+        const upiId =
+          profileData?.upiId;
 
-      const sorted = Object.entries(map)
-        .sort((a, b) => b[1] - a[1])
-        .map(([upiId, count]) => ({
-          upiId,
-          transactions: count,
-        }));
+        if (!upiId) {
+          setContacts([]);
+          return;
+        }
 
-      setContacts(sorted);
+        const res = await fetch(
+          `http://localhost:5000/transactions/${upiId}`
+        );
+
+        const data = await res.json();
+
+        const map = {};
+
+        data.forEach((t) => {
+          const other =
+            t.sender === upiId
+              ? t.receiver
+              : t.sender;
+
+          if (!other) return;
+
+          map[other] =
+            (map[other] || 0) + 1;
+        });
+
+        const sorted = Object.entries(map)
+          .sort((a, b) => b[1] - a[1])
+          .map(
+            ([upiId, count]) => ({
+              upiId,
+              transactions: count,
+            })
+          );
+
+        setContacts(sorted);
+      } catch (error) {
+        console.log(error);
+      }
     };
 
     fetchContacts();
   }, [isLoaded, user]);
 
-  // ✅ FILTER
-  const filteredContacts = contacts.filter((c) =>
-    c.upiId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContacts =
+    contacts.filter((c) =>
+      c.upiId
+        .toLowerCase()
+        .includes(
+          searchQuery.toLowerCase()
+        )
+    );
 
-  const handleContactClick = (upiId) => {
-    router.push(`/send-money?upiId=${upiId}`);
+  const handleContactClick = (
+    upiId
+  ) => {
+    router.push(
+      `/send-money?receiver=${encodeURIComponent(
+        upiId
+      )}`
+    );
   };
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
-      
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() =>
+          setSidebarOpen(false)
+        }
+      />
 
-      {/* Main */}
       <div className="flex-1 flex flex-col">
-        
-        {/* Topbar */}
         <Topbar
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          userName={user?.firstName || 'User'}
+          onMenuClick={() =>
+            setSidebarOpen(
+              !sidebarOpen
+            )
+          }
+          userName={
+            user?.firstName ||
+            'User'
+          }
         />
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-          <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+          <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
 
-            {/* Back */}
             <Link
-              href="/dashboard"
-              className="flex items-center gap-2 text-primary font-medium"
+              href="/"
+              className="inline-flex items-center gap-2 text-primary font-medium hover:opacity-80 transition"
             >
               <ArrowLeft className="w-5 h-5" />
               Back
             </Link>
 
-            {/* Header */}
             <div>
-              <h1 className="text-3xl font-bold">Your Contacts</h1>
-              <p className="text-muted-foreground">
-                {filteredContacts.length} contacts
+              <h1 className="text-3xl font-bold">
+                Your Contacts
+              </h1>
+
+              <p className="text-muted-foreground mt-1">
+                {
+                  filteredContacts.length
+                }{' '}
+                contacts
               </p>
             </div>
 
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+
               <Input
                 placeholder="Search by UPI ID..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12"
+                onChange={(e) =>
+                  setSearchQuery(
+                    e.target.value
+                  )
+                }
+                className="pl-12 h-12 rounded-xl"
               />
             </div>
 
-            {/* List */}
-            {filteredContacts.length > 0 ? (
+            {filteredContacts.length >
+            0 ? (
               <div className="space-y-3">
-                {filteredContacts.map((c, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleContactClick(c.upiId)}
-                    className="w-full flex items-center justify-between p-4 bg-card border rounded-xl hover:bg-muted transition"
-                  >
-                    <div>
-                      <p className="font-semibold">{c.upiId}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {c.transactions} transactions
-                      </p>
-                    </div>
-                    <span className="text-primary">→</span>
-                  </button>
-                ))}
+                {filteredContacts.map(
+                  (c, i) => (
+                    <button
+                      key={i}
+                      onClick={() =>
+                        handleContactClick(
+                          c.upiId
+                        )
+                      }
+                      className="w-full flex items-center justify-between rounded-2xl border bg-card p-4 shadow-sm hover:bg-muted transition"
+                    >
+                      <div className="text-left">
+                        <p className="font-semibold text-base">
+                          {c.upiId}
+                        </p>
+
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {
+                            c.transactions
+                          }{' '}
+                          transactions
+                        </p>
+                      </div>
+
+                      <ChevronRight className="w-5 h-5 text-primary" />
+                    </button>
+                  )
+                )}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center">
+              <div className="rounded-2xl border bg-card p-10 text-center text-muted-foreground">
                 No contacts found
-              </p>
+              </div>
             )}
           </div>
         </main>
       </div>
 
-      {/* Bottom Nav */}
       <BottomNav />
     </div>
   );
