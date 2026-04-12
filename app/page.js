@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { io } from 'socket.io-client';
 
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
@@ -11,16 +12,46 @@ import { QuickActions } from '@/components/cards/Quick-actions';
 import { FrequentContacts } from '@/components/cards/Frequent-contacts';
 
 export default function HomePage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
   const [showProfileForm, setShowProfileForm] =
     useState(false);
+
   const [phone, setPhone] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] =
+    useState('');
+
+  const [toast, setToast] = useState({
+    show: false,
+    message: '',
+    type: 'success',
+  });
 
   const { user, isLoaded } = useUser();
 
-  // Register user on first load
+  const showToastMessage = (
+    message,
+    type = 'success'
+  ) => {
+    setToast({
+      show: true,
+      message,
+      type,
+    });
+
+    setTimeout(() => {
+      setToast({
+        show: false,
+        message: '',
+        type,
+      });
+    }, 2500);
+  };
+
+  // =========================
+  // REGISTER USER
+  // =========================
   useEffect(() => {
     const registerUser = async () => {
       if (!isLoaded || !user) return;
@@ -31,7 +62,8 @@ export default function HomePage() {
           {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type':
+                'application/json',
             },
             body: JSON.stringify({
               name:
@@ -39,7 +71,8 @@ export default function HomePage() {
                 user.firstName ||
                 'User',
               email:
-                user.primaryEmailAddress
+                user
+                  .primaryEmailAddress
                   ?.emailAddress,
             }),
           }
@@ -59,7 +92,10 @@ export default function HomePage() {
           );
         }
 
-        if (!data.phone || !data.location) {
+        if (
+          !data.phone ||
+          !data.location
+        ) {
           setShowProfileForm(true);
         }
       } catch (error) {
@@ -73,34 +109,66 @@ export default function HomePage() {
     registerUser();
   }, [user, isLoaded]);
 
-  const saveProfileDetails = async () => {
-    try {
-      const upiId =
-        localStorage.getItem('upiId');
+  // =========================
+  // RECEIVE PAYMENT TOAST
+  // =========================
+  useEffect(() => {
+    const socket = io(
+      'http://localhost:5000'
+    );
 
-      await fetch(
-        `http://localhost:5000/user/${upiId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
-          body: JSON.stringify({
-            phone,
-            location,
-          }),
-        }
-      );
+    const upiId =
+      localStorage.getItem('upiId');
 
-      setShowProfileForm(false);
-    } catch (error) {
-      console.log(
-        'Profile save error:',
-        error
-      );
+    if (upiId) {
+      socket.emit('join', upiId);
     }
-  };
+
+    socket.on(
+      'paymentReceived',
+      ({ sender, amount }) => {
+        showToastMessage(
+          `₹${amount} received from ${sender}`,
+          'success'
+        );
+      }
+    );
+
+    return () =>
+      socket.disconnect();
+  }, []);
+
+  const saveProfileDetails =
+    async () => {
+      try {
+        const upiId =
+          localStorage.getItem(
+            'upiId'
+          );
+
+        await fetch(
+          `http://localhost:5000/user/${upiId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              phone,
+              location,
+            }),
+          }
+        );
+
+        setShowProfileForm(false);
+      } catch (error) {
+        console.log(
+          'Profile save error:',
+          error
+        );
+      }
+    };
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -123,12 +191,31 @@ export default function HomePage() {
           }
         />
 
+        {/* Toast */}
+        {toast.show && (
+          <div className="fixed top-20 right-0 z-50 toast-edge-slide">
+            <div
+              className={`w-80 rounded-l-xl border-l border-t border-b shadow-2xl px-4 py-3 ${
+                toast.type ===
+                'error'
+                  ? 'bg-red-600/95 border-red-500 text-white'
+                  : 'bg-green-600/95 border-green-500 text-white'
+              }`}
+            >
+              <p className="text-sm font-semibold">
+                {toast.message}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Profile Popup */}
         {showProfileForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl p-6 w-[400px] shadow-2xl">
               <h2 className="text-xl font-bold mb-4">
-                Complete Your Profile
+                Complete Your
+                Profile
               </h2>
 
               <input

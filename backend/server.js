@@ -7,6 +7,8 @@ import fs from "fs";
 import csv from "csv-parser";
 import axios from "axios";
 import dotenv from "dotenv";
+import { Resend } from "resend";
+
 
 dotenv.config();
 
@@ -43,6 +45,7 @@ async function checkML({
 
 const app = express();
 const otpStore = {};
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -89,19 +92,19 @@ app.post("/register", async (req, res) => {
     }
 
     // create new user
-await db.query(
-  `INSERT INTO users 
+    await db.query(
+      `INSERT INTO users 
    (name, email, phone, location, upiId, balance, created_at) 
    VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-  [
-    name,
-    email,
-    phone || null,
-    location || null,
-    upiId,
-    10000,
-  ]
-);
+      [
+        name,
+        email,
+        phone || null,
+        location || null,
+        upiId,
+        10000,
+      ]
+    );
 
     res.json({
       message: "User created",
@@ -117,7 +120,7 @@ await db.query(
 
 // Send Money API
 app.post("/send-money", async (req, res) => {
-  const { sender, receiver, amount } = req.body;
+  const { sender, receiver, amount, note, email } = req.body;
 
   try {
     const amt = Number(amount);
@@ -205,6 +208,21 @@ app.post("/send-money", async (req, res) => {
     } catch (err) {
       console.log("ML error:", err.message);
     }
+    let ruleScore = 0;
+
+    // Rule based logic
+    if (amt > 0.5 * senderBalance) ruleScore += 50;
+    if (amt > 10000) ruleScore += 20;
+    if (is_new_receiver) ruleScore += 15;
+
+    // ML score
+    const mlScore = Number(mlResult.score || 0);
+
+    // Final hybrid score
+    const finalRiskScore = Math.min(
+      Math.round(ruleScore * 0.5 + mlScore * 0.5),
+      100
+    );
 
     // =========================
     // ML DECISION
@@ -217,12 +235,33 @@ app.post("/send-money", async (req, res) => {
       mlResult.status === "high_risk"
     ) {
       const otp = Math.floor(100000 + Math.random() * 900000);
+      await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: "OTP Verification • UPI Fraud Detector",
+        html: `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+      <h2 style="margin-bottom: 10px;">OTP Verification</h2>
+      <p>Your transaction of <strong>₹${amt}</strong> requires verification.</p>
+      <p>Please use the OTP below:</p>
+
+      <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
+        ${otp}
+      </div>
+
+      <p style="color: #666; font-size: 14px;">
+        This OTP is valid for 5 minutes. Do not share it with anyone.
+      </p>
+    </div>
+  `,
+      });
 
       otpStore[sender] = {
         otp,
         sender,
         receiver,
         amount: amt,
+        note: note || null,
         time: Date.now(),
       };
 
@@ -230,9 +269,9 @@ app.post("/send-money", async (req, res) => {
 
       return res.json({
         status: "otp_required",
-        message: "OTP required (ML Risk)",
+        message: "OTP required (Hybrid Risk)",
         otp,
-        riskScore: mlResult.score,
+        riskScore: finalRiskScore,
       });
     }
 
@@ -251,8 +290,8 @@ app.post("/send-money", async (req, res) => {
     ]);
 
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
-      [sender, receiver, amt, "success", "ML: Low risk transaction"],
+      "INSERT INTO transactions (sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, NOW(), ?, ?)",
+      [sender, receiver, amt, note || null, "success", "ML: Low risk transaction",]
     );
 
     io.to(sender).emit("balanceUpdated");
@@ -524,14 +563,8 @@ app.post("/verify-otp", async (req, res) => {
     // =========================
 
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
-      [
-        data.sender,
-        data.receiver,
-        data.amount,
-        "success",
-        "High amount - OTP verified",
-      ],
+      "INSERT INTO transactions (sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, NOW(), ?, ?)",
+      [data.sender, data.receiver, data.amount, data.note || null, "success", "High amount - OTP verified",]
     );
 
     io.to(data.sender).emit("balanceUpdated");

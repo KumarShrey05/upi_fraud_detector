@@ -32,7 +32,7 @@ const actions = [
 
 export function QuickActions() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 place-items-center">
       {actions.map((action) => {
         const Icon = action.icon;
         const Component = action.href === '#' ? 'button' : Link;
@@ -41,7 +41,7 @@ export function QuickActions() {
           <Component
             key={action.label}
             href={action.href}
-            className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-gradient-to-br opacity-90 hover:opacity-100 transition-opacity"
+            className="inline-flex flex-col items-center justify-center gap-3 p-4 rounded-2xl bg-gradient-to-br opacity-90 hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
             style={{
               backgroundImage: `linear-gradient(to bottom right, var(--color-${action.color.split(' ')[1]}), var(--color-${action.color.split(' ')[3]}))`,
             }}
@@ -49,6 +49,7 @@ export function QuickActions() {
             <div className={`bg-gradient-to-br ${action.color} p-3 rounded-xl`}>
               <Icon className="w-6 h-6 text-white" />
             </div>
+
             <span className="text-sm font-medium text-foreground text-center">
               {action.label}
             </span>

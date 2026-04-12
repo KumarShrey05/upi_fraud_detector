@@ -1,62 +1,40 @@
 'use client';
 
-import {
-  CreditCard,
-  Home,
-  Send,
-  History,
-  LogOut,
-  X,
-  AlertTriangle,
-  Calendar,
-  User,
-  Settings,
-} from 'lucide-react';
+import { CreditCard, Home, Send, History, LogOut, LogIn, X, AlertTriangle, Calendar, User, Settings, } from 'lucide-react';
+
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useClerk, useUser } from '@clerk/nextjs';
 
 const mainLinks = [
   { href: '/', label: 'Home', icon: Home },
-  {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: CreditCard,
-  },
-  {
-    href: '/send-money',
-    label: 'Send Money',
-    icon: Send,
-  },
-  {
-    href: '/transactions',
-    label: 'Transactions',
-    icon: History,
-  },
+  { href: '/dashboard', label: 'Dashboard', icon: CreditCard },
+  { href: '/send-money', label: 'Send Money', icon: Send },
+  { href: '/transactions', label: 'Transactions', icon: History },
 ];
 
 const secondaryLinks = [
-  {
-    href: '/fraud-list',
-    label: 'Fraud List',
-    icon: AlertTriangle,
-  },
-  {
-    href: '/monthly-tracking',
-    label: 'Monthly Tracking',
-    icon: Calendar,
-  },
+  { href: '/fraud-list', label: 'Fraud List', icon: AlertTriangle },
+  { href: '/monthly-tracking', label: 'Monthly Tracking', icon: Calendar },
   { href: '/profile', label: 'Profile', icon: User },
-  {
-    href: '/settings',
-    label: 'Settings',
-    icon: Settings,
-  },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export function Sidebar(props = {}) {
-  const { isOpen = true, onClose } = props;
+export function Sidebar({ isOpen = true, onClose }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const { signOut } = useClerk();
+  const { isSignedIn } = useUser();
+
+  const handleAuthAction = async () => {
+    if (isSignedIn) {
+      await signOut({ redirectUrl: '/' });
+    } else {
+      router.push('/login');
+    }
+  };
 
   return (
     <>
@@ -69,46 +47,53 @@ export function Sidebar(props = {}) {
 
       <aside
         className={cn(
-          'fixed md:sticky top-0 left-0 z-40 h-screen w-64 bg-card border-r border-border transition-transform duration-300 flex flex-col',
-          'md:translate-x-0',
-          isOpen
-            ? 'translate-x-0'
-            : '-translate-x-full'
+          'fixed md:sticky top-0 left-0 z-40 w-64 bg-card border-r border-border',
+          'flex flex-col transition-transform duration-300',
+          'h-[100dvh] md:h-screen pb-16 md:pb-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
+        {/* HEADER */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-border">
-          <div className="flex items-center gap-3">
+          
+          <Link
+            href="/"
+            onClick={onClose}
+            className="flex items-center gap-3 cursor-pointer"
+          >
+            {/* ICON */}
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
 
-            <h2 className="text-lg font-bold text-foreground">
+            {/* ✅ ONLY TEXT HOVER SCALE */}
+            <h2 className="text-lg font-bold text-foreground transform transition-transform duration-300 ease-in-out hover:scale-[1.2]">
               UPay
             </h2>
-          </div>
+          </Link>
 
           <button
             onClick={onClose}
-            className="md:hidden p-1 hover:bg-muted rounded-lg transition-colors"
+            className="md:hidden p-1 hover:bg-muted rounded-lg cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto">
+        {/* NAV */}
+        <nav className="flex-1 px-4 py-6 space-y-8">
           <div className="space-y-2">
             {mainLinks.map((link) => {
               const Icon = link.icon;
-              const isActive =
-                pathname === link.href;
+              const isActive = pathname === link.href;
 
               return (
                 <Link
-                  key={link.href + link.label}
+                  key={link.href}
                   href={link.href}
                   onClick={onClose}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium',
+                    'flex items-center gap-3 px-4 py-3 rounded-lg font-medium',
                     isActive
                       ? 'bg-primary text-primary-foreground'
                       : 'text-foreground hover:bg-muted'
@@ -128,8 +113,7 @@ export function Sidebar(props = {}) {
 
             {secondaryLinks.map((link) => {
               const Icon = link.icon;
-              const isActive =
-                pathname === link.href;
+              const isActive = pathname === link.href;
 
               return (
                 <Link
@@ -137,7 +121,7 @@ export function Sidebar(props = {}) {
                   href={link.href}
                   onClick={onClose}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium',
+                    'flex items-center gap-3 px-4 py-3 rounded-lg font-medium',
                     isActive
                       ? 'bg-primary text-primary-foreground'
                       : 'text-foreground hover:bg-muted'
@@ -151,10 +135,23 @@ export function Sidebar(props = {}) {
           </div>
         </nav>
 
-        <div className="border-t border-border p-4">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-muted transition-colors font-medium">
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
+        {/* AUTH BUTTON */}
+        <div className="border-t border-border p-4 bg-card">
+          <button
+            onClick={handleAuthAction}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted cursor-pointer"
+          >
+            {isSignedIn ? (
+              <>
+                <LogOut className="w-5 h-5" />
+                <span>Logout</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-5 h-5" />
+                <span>Login</span>
+              </>
+            )}
           </button>
         </div>
       </aside>
