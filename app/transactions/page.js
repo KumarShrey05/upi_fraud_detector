@@ -53,6 +53,10 @@ export default function TransactionsPage() {
       const isSent = txn.sender === userUpi;
       const isBlocked = txn.status === 'blocked';
 
+      const isOtpVerified =
+        txn.status === 'otp_verified' ||
+        txn.reason?.toLowerCase().includes('otp');
+
       return {
         id: `${txn.sender}-${txn.receiver}-${txn.time}-${txn.amount}-${index}`,
         type: isBlocked ? 'blocked' : isSent ? 'sent' : 'received',
@@ -60,7 +64,11 @@ export default function TransactionsPage() {
         upiId: isSent || isBlocked ? txn.receiver : txn.sender,
         amount: Number(txn.amount),
         timestamp: new Date(txn.time),
-        status: txn.status === 'success' ? 'completed' : txn.status,
+        status: isOtpVerified
+          ? 'otp_verified'
+          : txn.status === 'success'
+          ? 'completed'
+          : txn.status,
         riskReason: txn.reason || '',
       };
     });
@@ -71,41 +79,56 @@ export default function TransactionsPage() {
       txn.upiId.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFilter =
-      filterStatus === 'all' || txn.status === filterStatus;
+      filterStatus === 'all' ||
+      txn.status === filterStatus;
 
     return matchesSearch && matchesFilter;
   });
 
   const stats = {
     totalTransactions: formattedTransactions.length,
-    completed: formattedTransactions.filter((t) => t.status === 'completed').length,
-    blocked: formattedTransactions.filter((t) => t.status === 'blocked').length,
-    pending: formattedTransactions.filter((t) => t.status === 'pending').length,
+    completed: formattedTransactions.filter(
+      (t) => t.status === 'completed'
+    ).length,
+    blocked: formattedTransactions.filter(
+      (t) => t.status === 'blocked'
+    ).length,
+    pending: formattedTransactions.filter(
+      (t) => t.status === 'pending'
+    ).length,
+    otpVerified: formattedTransactions.filter(
+      (t) => t.status === 'otp_verified'
+    ).length,
   };
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <div className="flex-1 flex flex-col md:ml-0">
         <Topbar
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          userName="Transactions"
+          onMenuClick={() => setSidebarOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-          <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+          <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
             <div>
-              <h1 className="text-3xl font-bold">Transactions</h1>
+              <h1 className="text-3xl font-bold">
+                Transaction History
+              </h1>
               <p className="text-muted-foreground mt-1">
                 View and manage your transaction history
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <StatCard label="Total" value={stats.totalTransactions} />
               <StatCard label="Completed" value={stats.completed} />
               <StatCard label="Blocked" value={stats.blocked} />
+              <StatCard label="OTP Verified" value={stats.otpVerified} />
               <StatCard label="Pending" value={stats.pending} />
             </div>
 
@@ -115,21 +138,37 @@ export default function TransactionsPage() {
                 <Input
                   placeholder="Search by name or UPI..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) =>
+                    setSearchTerm(e.target.value)
+                  }
                   className="pl-10"
                 />
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {['all', 'completed', 'blocked', 'pending'].map((status) => (
+                {[
+                  'all',
+                  'completed',
+                  'blocked',
+                  'otp_verified',
+                  'pending',
+                ].map((status) => (
                   <Button
                     key={status}
-                    variant={filterStatus === status ? 'default' : 'outline'}
-                    onClick={() => setFilterStatus(status)}
+                    variant={
+                      filterStatus === status
+                        ? 'default'
+                        : 'outline'
+                    }
+                    onClick={() =>
+                      setFilterStatus(status)
+                    }
                     className="rounded-full capitalize"
                   >
                     <Filter className="w-4 h-4 mr-2" />
-                    {status}
+                    {status === 'otp_verified'
+                      ? 'OTP Verified'
+                      : status}
                   </Button>
                 ))}
               </div>
@@ -138,7 +177,10 @@ export default function TransactionsPage() {
             <div className="space-y-3">
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((txn) => (
-                  <TransactionRow key={txn.id} txn={txn} />
+                  <TransactionRow
+                    key={txn.id}
+                    txn={txn}
+                  />
                 ))
               ) : (
                 <div className="bg-card border rounded-2xl p-8 text-center">
@@ -158,8 +200,12 @@ export default function TransactionsPage() {
 function StatCard({ label, value }) {
   return (
     <div className="bg-card border rounded-xl p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+      <p className="text-xs text-muted-foreground">
+        {label}
+      </p>
+      <p className="text-2xl font-bold mt-1">
+        {value}
+      </p>
     </div>
   );
 }
@@ -183,22 +229,29 @@ function TransactionRow({ txn }) {
     <div className="bg-card border rounded-2xl p-4 flex justify-between">
       <div>
         <p className="font-semibold">{txn.name}</p>
-        <p className="text-sm text-muted-foreground">{txn.upiId}</p>
+        <p className="text-sm text-muted-foreground">
+          {txn.upiId}
+        </p>
         <p className="text-xs text-muted-foreground">
           {txn.timestamp.toLocaleString()}
         </p>
 
         {txn.riskReason && (
-          <p className="text-xs text-red-500 mt-1">{txn.riskReason}</p>
+          <p className="text-xs text-red-500 mt-1">
+            {txn.riskReason}
+          </p>
         )}
       </div>
 
       <div className="text-right">
         <p className={`font-bold ${amountColor}`}>
-          {amountSign} ₹{txn.amount.toLocaleString('en-IN')}
+          {amountSign} ₹
+          {txn.amount.toLocaleString('en-IN')}
         </p>
         <span className="text-xs px-2 py-1 rounded-full bg-muted">
-          {txn.status}
+          {txn.status === 'otp_verified'
+            ? 'OTP Verified'
+            : txn.status}
         </span>
       </div>
     </div>

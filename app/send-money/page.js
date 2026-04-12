@@ -379,7 +379,12 @@ export default function SendMoneyPage() {
       />
 
       <div className="flex-1 flex flex-col md:ml-0">
-<Topbar />
+        <Topbar
+          onMenuClick={() =>
+            setSidebarOpen(!sidebarOpen)
+          }
+          userName={user?.firstName || 'User'}
+        />
 
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0 flex items-center justify-center">
           <div className="w-full max-w-md p-4 sm:p-6">
@@ -621,8 +626,8 @@ export default function SendMoneyPage() {
         >
           <div
             className={`w-80 border-l border-t border-b shadow-2xl px-4 py-3 ${toast.type === 'error'
-                ? 'bg-red-600/95 border-red-500 text-white'
-                : 'bg-green-600/95 border-green-500 text-white'
+              ? 'bg-red-600/95 border-red-500 text-white'
+              : 'bg-green-600/95 border-green-500 text-white'
               }`}
           >
             <p className="text-sm font-semibold">

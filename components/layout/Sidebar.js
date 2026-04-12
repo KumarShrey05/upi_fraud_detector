@@ -1,7 +1,18 @@
 'use client';
 
-import { CreditCard, Home, Send, History, LogOut, LogIn, X, AlertTriangle, Calendar, User, Settings, } from 'lucide-react';
-
+import {
+  CreditCard,
+  Home,
+  Send,
+  History,
+  LogOut,
+  LogIn,
+  X,
+  AlertTriangle,
+  Calendar,
+  User,
+  Settings,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -21,10 +32,9 @@ const secondaryLinks = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export function Sidebar({ isOpen = true, onClose }) {
+export function Sidebar({ isOpen = false, onClose }) {
   const pathname = usePathname();
   const router = useRouter();
-
   const { signOut } = useClerk();
   const { isSignedIn } = useUser();
 
@@ -47,27 +57,22 @@ export function Sidebar({ isOpen = true, onClose }) {
 
       <aside
         className={cn(
-          'fixed md:sticky top-0 left-0 z-40 w-64 bg-card border-r border-border',
-          'flex flex-col transition-transform duration-300',
-          'h-[100dvh] md:h-screen pb-16 md:pb-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          'fixed top-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col h-screen transition-transform duration-300',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          'md:sticky md:translate-x-0'
         )}
       >
-        {/* HEADER */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-border">
-          
           <Link
             href="/"
             onClick={onClose}
             className="flex items-center gap-3 cursor-pointer"
           >
-            {/* ICON */}
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
 
-            {/* ✅ ONLY TEXT HOVER SCALE */}
-            <h2 className="text-lg font-bold text-foreground transform transition-transform duration-300 ease-in-out hover:scale-[1.2]">
+            <h2 className="text-lg font-bold text-foreground transition-transform duration-300 hover:scale-110">
               UPay
             </h2>
           </Link>
@@ -80,7 +85,6 @@ export function Sidebar({ isOpen = true, onClose }) {
           </button>
         </div>
 
-        {/* NAV */}
         <nav className="flex-1 px-4 py-6 space-y-8">
           <div className="space-y-2">
             {mainLinks.map((link) => {
@@ -135,7 +139,6 @@ export function Sidebar({ isOpen = true, onClose }) {
           </div>
         </nav>
 
-        {/* AUTH BUTTON */}
         <div className="border-t border-border p-4 bg-card">
           <button
             onClick={handleAuthAction}
