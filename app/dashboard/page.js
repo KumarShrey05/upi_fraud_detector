@@ -20,168 +20,301 @@ import {
   Legend,
 } from 'recharts';
 
-  // Custom Tooltip
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-200">
-          <p className="text-xs text-gray-500 mb-1">{label}</p>
-          {payload.map((entry, index) => (
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}) => {
+  if (
+    active &&
+    payload &&
+    payload.length
+  ) {
+    return (
+      <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-200">
+        <p className="text-xs text-gray-500 mb-1">
+          {label}
+        </p>
+
+        {payload.map(
+          (entry, index) => (
             <p
               key={index}
               className="text-sm font-medium"
-              style={{ color: entry.color }}
+              style={{
+                color: entry.color,
+              }}
             >
-              {entry.name === 'sent' ? 'Sent' : 'Received'}: ₹{entry.value}
+              {entry.name === 'sent'
+                ? 'Sent'
+                : 'Received'}
+              : ₹{entry.value}
             </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+          )
+        )}
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export default function DashboardPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } =
+    useUser();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [balance, setBalance] = useState(0);
-  const [transactions, setTransactions] = useState([]);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
-const [stats, setStats] = useState({
-  totalSent: 0,
-  totalReceived: 0,
-  securityScore: 100,
-});
+  const [balance, setBalance] =
+    useState(0);
 
-  const [chartData, setChartData] = useState([]);
+  const [transactions, setTransactions] =
+    useState([]);
+
+  const [stats, setStats] =
+    useState({
+      totalSent: 0,
+      totalReceived: 0,
+      protectionScore: 0,
+    });
+
+  const [chartData, setChartData] =
+    useState([]);
 
   useEffect(() => {
-    if (!isLoaded || !user) return;
+    if (!isLoaded) return;
 
-    const upiId =
-      user.primaryEmailAddress.emailAddress.split('@')[0] +
-      '@upi';
+    let socket;
 
-    const socket = io('http://localhost:5000');
-    socket.emit('join', upiId);
+    const fetchDashboardData =
+      async () => {
+        try {
+          if (!user) {
+            setBalance(0);
+            setTransactions([]);
+            setChartData([]);
 
-    const fetchDashboardData = async () => {
-      try {
-        const userRes = await fetch(
-          `http://localhost:5000/user/${upiId}`
-        );
-        const userData = await userRes.json();
+            setStats({
+              totalSent: 0,
+              totalReceived: 0,
+              protectionScore: 0,
+            });
 
-        const txnRes = await fetch(
-          `http://localhost:5000/transactions/${upiId}`
-        );
-        const txnData = await txnRes.json();
+            return;
+          }
 
-        setBalance(Number(userData.balance) || 0);
-        setTransactions(txnData || []);
+          const email =
+            user
+              .primaryEmailAddress
+              ?.emailAddress;
 
-        const sent = txnData
-          .filter(
-            (txn) =>
-              txn.sender === upiId &&
-              txn.status === 'success'
-          )
-          .reduce(
-            (sum, txn) =>
-              sum + Number(txn.amount),
-            0
+          const profileRes =
+            await fetch(
+              `http://localhost:5000/user/email/${encodeURIComponent(
+                email
+              )}`
+            );
+
+          const profileData =
+            await profileRes.json();
+
+          const upiId =
+            profileData?.upiId;
+
+          if (!upiId) {
+            setBalance(0);
+            setTransactions([]);
+            setChartData([]);
+
+            setStats({
+              totalSent: 0,
+              totalReceived: 0,
+              protectionScore: 0,
+            });
+
+            return;
+          }
+
+          socket = io(
+            'http://localhost:5000'
           );
 
-        const received = txnData
-          .filter(
-            (txn) =>
-              txn.receiver === upiId &&
-              txn.status === 'success'
-          )
-          .reduce(
-            (sum, txn) =>
-              sum + Number(txn.amount),
-            0
+          socket.emit(
+            'join',
+            upiId
           );
 
-const totalTxns = txnData.length;
+          const userRes =
+            await fetch(
+              `http://localhost:5000/user/${upiId}`
+            );
 
-const blockedTxns = txnData.filter(
-  (txn) => txn.status === 'blocked'
-).length;
+          const userData =
+            await userRes.json();
 
-const failedTxns = txnData.filter(
-  (txn) => txn.status === 'failed'
-).length;
+          const txnRes =
+            await fetch(
+              `http://localhost:5000/transactions/${upiId}`
+            );
 
-const riskyTxns = blockedTxns + failedTxns;
+          const txnData =
+            await txnRes.json();
 
-let securityScore = 100;
+          const insightRes =
+            await fetch(
+              `http://localhost:5000/fraud-insights/${upiId}`
+            );
 
-if (totalTxns > 0) {
-  securityScore = Math.max(
-    0,
-    Math.round(
-      ((totalTxns - riskyTxns) / totalTxns) * 100
-    )
-  );
-}
+          const insightData =
+            await insightRes.json();
 
-setStats({
-  totalSent: sent,
-  totalReceived: received,
-  securityScore,
-});
+          setBalance(
+            Number(
+              userData.balance
+            ) || 0
+          );
 
-        const graphTransactions = txnData
-          .filter((txn) => txn.status === 'success')
-          .slice(0, 7)
-          .reverse()
-          .map((txn, index) => ({
-            date:
-              new Date(txn.time).toLocaleDateString(
-                'en-IN',
-                {
-                  day: 'numeric',
-                  month: 'short',
-                }
-              ) + `-${index + 1}`,
-            sent:
-              txn.sender === upiId
-                ? Number(txn.amount)
-                : 0,
-            received:
-              txn.receiver === upiId
-                ? Number(txn.amount)
-                : 0,
-          }));
+          setTransactions(
+            txnData || []
+          );
 
-        setChartData(graphTransactions);
-      } catch (error) {
-        console.log(error);
-      }
-    };
+          const successfulTxns =
+            txnData.filter(
+              (txn) =>
+                txn.status ===
+                'success'
+            );
+
+          const sent =
+            successfulTxns
+              .filter(
+                (txn) =>
+                  txn.sender ===
+                  upiId
+              )
+              .reduce(
+                (
+                  sum,
+                  txn
+                ) =>
+                  sum +
+                  Number(
+                    txn.amount
+                  ),
+                0
+              );
+
+          const received =
+            successfulTxns
+              .filter(
+                (txn) =>
+                  txn.receiver ===
+                  upiId
+              )
+              .reduce(
+                (
+                  sum,
+                  txn
+                ) =>
+                  sum +
+                  Number(
+                    txn.amount
+                  ),
+                0
+              );
+
+          setStats({
+            totalSent: sent,
+            totalReceived:
+              received,
+            protectionScore:
+              insightData?.protectionScore ||
+              0,
+          });
+
+          const graphTransactions =
+            successfulTxns
+              .slice(0, 7)
+              .reverse()
+              .map(
+                (
+                  txn,
+                  index
+                ) => ({
+                  date:
+                    new Date(
+                      txn.time
+                    ).toLocaleDateString(
+                      'en-IN',
+                      {
+                        day: 'numeric',
+                        month:
+                          'short',
+                      }
+                    ) +
+                    `-${
+                      index +
+                      1
+                    }`,
+                  sent:
+                    txn.sender ===
+                    upiId
+                      ? Number(
+                          txn.amount
+                        )
+                      : 0,
+                  received:
+                    txn.receiver ===
+                    upiId
+                      ? Number(
+                          txn.amount
+                        )
+                      : 0,
+                })
+              );
+
+          setChartData(
+            graphTransactions
+          );
+
+          socket.on(
+            'balanceUpdated',
+            fetchDashboardData
+          );
+        } catch (error) {
+          console.log(error);
+        }
+      };
 
     fetchDashboardData();
-    socket.on('balanceUpdated', fetchDashboardData);
 
-    return () => socket.disconnect();
+    return () => {
+      if (socket)
+        socket.disconnect();
+    };
   }, [isLoaded, user]);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
       <Sidebar
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() =>
+          setSidebarOpen(false)
+        }
       />
 
       <div className="flex-1 flex flex-col md:ml-0">
         <Topbar
           onMenuClick={() =>
-            setSidebarOpen(!sidebarOpen)
+            setSidebarOpen(
+              !sidebarOpen
+            )
           }
-          userName={user?.firstName || 'User'}
+          userName={
+            user?.firstName ||
+            'User'
+          }
         />
 
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
@@ -190,68 +323,77 @@ setStats({
               <h1 className="text-3xl font-bold text-foreground">
                 Dashboard
               </h1>
+
               <p className="text-muted-foreground mt-1">
-                Overview of your financial activity
+                Overview of your
+                financial
+                activity
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <p className="text-muted-foreground text-sm font-medium">
-                  Account Balance
-                </p>
-                <p className="text-3xl font-bold mt-2">
-                  ₹{balance.toLocaleString('en-IN')}
-                </p>
-              </div>
+              <MetricCard
+                title="Account Balance"
+                value={`₹${balance.toLocaleString(
+                  'en-IN'
+                )}`}
+              />
 
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <p className="text-muted-foreground text-sm font-medium">
-                  Total Sent
-                </p>
-                <p className="text-3xl font-bold mt-2">
-                  ₹{stats.totalSent.toLocaleString('en-IN')}
-                </p>
-              </div>
+              <MetricCard
+                title="Total Sent"
+                value={`₹${stats.totalSent.toLocaleString(
+                  'en-IN'
+                )}`}
+              />
 
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <p className="text-muted-foreground text-sm font-medium">
-                  Total Received
-                </p>
-                <p className="text-3xl font-bold mt-2">
-                  ₹{stats.totalReceived.toLocaleString('en-IN')}
-                </p>
-              </div>
+              <MetricCard
+                title="Total Received"
+                value={`₹${stats.totalReceived.toLocaleString(
+                  'en-IN'
+                )}`}
+              />
 
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <p className="text-muted-foreground text-sm font-medium">
-                  Security Score
-                </p>
-                <p className="text-3xl font-bold text-green-500 mt-2">
-                  {stats.securityScore}%
-                </p>
-              </div>
+              <MetricCard
+                title="Protection Score"
+                value={`${stats.protectionScore}%`}
+                green
+              />
             </div>
 
-            {/* Chart */}
             <div className="bg-card border border-border rounded-2xl p-6">
               <h3 className="text-lg font-bold mb-4">
-                Recent Transaction Trend
+                Recent
+                Transaction
+                Trend
               </h3>
 
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
+              <ResponsiveContainer
+                width="100%"
+                height={300}
+              >
+                <LineChart
+                  data={chartData}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
+
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(value) =>
-                      value.split('-')[0]
+                    tickFormatter={(
+                      value
+                    ) =>
+                      value.split(
+                        '-'
+                      )[0]
                     }
                   />
+
                   <YAxis />
-                  
-                  {/* ✅ Custom Tooltip */}
-                  <Tooltip content={<CustomTooltip />} />
+
+                  <Tooltip
+                    content={
+                      <CustomTooltip />
+                    }
+                  />
 
                   <Legend />
 
@@ -259,21 +401,18 @@ setStats({
                     type="monotone"
                     dataKey="sent"
                     stroke="#6366f1"
-                    strokeWidth={2.5}
-                    isAnimationActive={true}
-      animationDuration={3000}
-      animationEasing="ease-in-out"
+                    strokeWidth={
+                      2.5
+                    }
                   />
 
                   <Line
                     type="monotone"
                     dataKey="received"
                     stroke="#22c55e"
-                    strokeWidth={2.5}
-                          isAnimationActive={true}
-      animationDuration={3000}
-      animationEasing="ease-in-out"
-      // animationBegin={1500}
+                    strokeWidth={
+                      2.5
+                    }
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -284,13 +423,17 @@ setStats({
                 type="success"
                 title="Account Verified"
                 description="Your account has passed all security checks"
-                metric="✅ 100% Verified"
+                metric={`✅ ${
+                  user
+                    ? '100'
+                    : '0'
+                }% Verified`}
               />
 
               <InsightCard
                 type="info"
                 title="Recent Activity"
-                description="No suspicious activity detected in the last 30 days"
+                description="Transaction activity in the last 30 days"
                 metric={`📊 ${transactions.length} Transactions`}
               />
             </div>
@@ -299,6 +442,30 @@ setStats({
       </div>
 
       <BottomNav />
+    </div>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  green,
+}) {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-6">
+      <p className="text-muted-foreground text-sm font-medium">
+        {title}
+      </p>
+
+      <p
+        className={`text-3xl font-bold mt-2 ${
+          green
+            ? 'text-green-500'
+            : ''
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

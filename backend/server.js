@@ -599,92 +599,70 @@ app.post("/verify-otp", async (req, res) => {
 });
 
 // Fraud insights API
-app.get('/fraud-insights', async (req, res) => {
+app.get('/fraud-insights/:upiId', async (req, res) => {
+  const { upiId } = req.params;
+
   try {
-    const [transactions] = await db.query(`
-      SELECT *
-      FROM transactions
-      ORDER BY time DESC
-    `);
+    const [transactions] = await db.query(
+      `SELECT * FROM transactions
+       WHERE sender = ? OR receiver = ?
+       ORDER BY time DESC`,
+      [upiId, upiId]
+    );
 
     const totalCount = transactions.length;
 
     const blockedCount = transactions.filter(
-      (txn) =>
-        txn.status?.toLowerCase() === 'blocked'
+      t => t.status?.toLowerCase() === 'blocked'
     ).length;
 
     const otpCount = transactions.filter(
-      (txn) =>
-        txn.reason
-          ?.toLowerCase()
-          .includes('otp')
+      t => t.reason?.toLowerCase().includes('otp')
     ).length;
 
     const safeCount = transactions.filter(
-      (txn) =>
-        txn.status?.toLowerCase() === 'success' || txn.status?.toLowerCase() === 'completed').length;
+      t => t.status?.toLowerCase() === 'success'
+    ).length;
 
     const totalAmount = transactions.reduce(
-      (sum, txn) =>
-        sum + Number(txn.amount || 0),
+      (s, t) => s + Number(t.amount || 0),
       0
     );
 
-    const avgAmount =
-      totalCount > 0
-        ? Math.round(
-            totalAmount / totalCount
-          )
-        : 0;
+    const avgAmount = totalCount
+      ? Math.round(totalAmount / totalCount)
+      : 0;
 
-    const highRiskCount =
-      transactions.filter(
-        (txn) =>
-          Number(txn.amount || 0) >=
-          10000
-      ).length;
+    const highRiskCount = transactions.filter(
+      t => Number(t.amount) >= 10000
+    ).length;
 
-    const riskRatio =
-      totalCount > 0
-        ? (
-            ((blockedCount +
-              highRiskCount) /
-              totalCount) *
-            100
-          )
-        : 0;
+    const riskRatio = totalCount
+      ? Math.round(((blockedCount + highRiskCount) / totalCount) * 100)
+      : 0;
 
     let threatLevel = 'LOW';
 
-    if (riskRatio >= 40) {
-      threatLevel = 'HIGH';
-    } else if (riskRatio >= 15) {
-      threatLevel = 'MEDIUM';
-    }
+    if (riskRatio >= 40) threatLevel = 'HIGH';
+    else if (riskRatio >= 15) threatLevel = 'MEDIUM';
 
-    const protectionScore = Math.max(
-      100 - Math.round(riskRatio),
-      0
-    );
-
-    const latestTransaction =
-      totalCount > 0
-        ? transactions[0]
-        : null;
-
-    res.json({ blockedCount, otpCount, safeCount, totalCount, totalAmount, avgAmount, highRiskCount, riskRatio: Math.round(
-        riskRatio ), threatLevel, protectionScore, latestTransaction,
+    res.json({
+      blockedCount,
+      otpCount,
+      safeCount,
+      totalCount,
+      totalAmount,
+      avgAmount,
+      highRiskCount,
+      riskRatio,
+      threatLevel,
+      protectionScore: Math.max(100 - riskRatio, 0),
+      latestTransaction: transactions[0] || null
     });
-  } catch (error) {
-    console.error(
-      'Fraud insights error:',
-      error
-    );
-
+  } catch (err) {
+    console.log(err);
     res.status(500).json({
-      error:
-        'Failed to fetch fraud insights',
+      error: 'Failed to fetch fraud insights'
     });
   }
 });

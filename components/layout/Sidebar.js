@@ -26,7 +26,7 @@ const mainLinks = [
 ];
 
 const secondaryLinks = [
-  { href: '/fraud-list', label: 'Fraud List', icon: AlertTriangle },
+  { href: '/protection-center', label: 'Protection Center', icon: AlertTriangle },
   { href: '/monthly-tracking', label: 'Monthly Tracking', icon: Calendar },
   { href: '/profile', label: 'Profile', icon: User },
   { href: '/settings', label: 'Settings', icon: Settings },

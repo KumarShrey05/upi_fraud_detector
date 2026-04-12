@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/Bottom-nav';
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 
 export default function FraudListPage() {
+  const { user } = useUser();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,8 +25,28 @@ export default function FraudListPage() {
   useEffect(() => {
     const fetchInsights = async () => {
       try {
-        const res = await fetch('http://localhost:5000/fraud-insights');
+        if (!user?.primaryEmailAddress?.emailAddress) return;
+
+        const email =
+          user.primaryEmailAddress.emailAddress;
+
+        const userRes = await fetch(
+          `http://localhost:5000/user/email/${email}`
+        );
+
+        const userData = await userRes.json();
+
+        if (!userData?.upiId) {
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(
+          `http://localhost:5000/fraud-insights/${userData.upiId}`
+        );
+
         const data = await res.json();
+
         setInsights(data);
       } catch (error) {
         console.log(error);
@@ -33,13 +56,16 @@ export default function FraudListPage() {
     };
 
     fetchInsights();
-  }, []);
+  }, [user]);
 
   const getThreatColor = () => {
     if (!insights?.threatLevel) return 'bg-gray-500';
 
-    if (insights.threatLevel === 'HIGH') return 'bg-red-500';
-    if (insights.threatLevel === 'MEDIUM') return 'bg-yellow-500';
+    if (insights.threatLevel === 'HIGH')
+      return 'bg-red-500';
+
+    if (insights.threatLevel === 'MEDIUM')
+      return 'bg-yellow-500';
 
     return 'bg-green-500';
   };
@@ -54,10 +80,15 @@ export default function FraudListPage() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <div className="flex-1 flex flex-col">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar
+          onMenuClick={() => setSidebarOpen(true)}
+        />
 
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -91,9 +122,21 @@ export default function FraudListPage() {
                   </p>
 
                   <div className="flex gap-4 mt-6 flex-wrap">
-                    <GlassStat icon={<ShieldAlert />} label="Blocked" value={insights?.blockedCount || 0} />
-                    <GlassStat icon={<ShieldCheck />} label="Safe" value={insights?.safeCount || 0} />
-                    <GlassStat icon={<Sparkles />} label="OTP" value={insights?.otpCount || 0} />
+                    <GlassStat
+                      icon={<ShieldAlert />}
+                      label="Blocked"
+                      value={insights?.blockedCount || 0}
+                    />
+                    <GlassStat
+                      icon={<ShieldCheck />}
+                      label="Safe"
+                      value={insights?.safeCount || 0}
+                    />
+                    <GlassStat
+                      icon={<Sparkles />}
+                      label="OTP"
+                      value={insights?.otpCount || 0}
+                    />
                   </div>
                 </div>
 
@@ -144,8 +187,14 @@ export default function FraudListPage() {
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-4">
-                  <MiniMetric label="Total Amount" value={`₹${insights?.totalAmount || 0}`} />
-                  <MiniMetric label="Avg Amount" value={`₹${insights?.avgAmount || 0}`} />
+                  <MiniMetric
+                    label="Total Amount"
+                    value={`₹${insights?.totalAmount || 0}`}
+                  />
+                  <MiniMetric
+                    label="Avg Amount"
+                    value={`₹${insights?.avgAmount || 0}`}
+                  />
                 </div>
               </div>
             </div>
@@ -168,7 +217,9 @@ export default function FraudListPage() {
 
                   {insights?.latestTransaction?.time && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(insights.latestTransaction.time).toLocaleString('en-IN')}
+                      {new Date(
+                        insights.latestTransaction.time
+                      ).toLocaleString('en-IN')}
                     </p>
                   )}
                 </div>
@@ -191,7 +242,9 @@ function GlassStat({ icon, label, value }) {
         {icon}
         <span className="text-xs">{label}</span>
       </div>
-      <p className="text-xl font-bold mt-2">{value}</p>
+      <p className="text-xl font-bold mt-2">
+        {value}
+      </p>
     </div>
   );
 }
@@ -208,8 +261,12 @@ function StoryLine({ text }) {
 function MiniMetric({ label, value }) {
   return (
     <div className="rounded-2xl border p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-xl font-bold mt-2">{value}</p>
+      <p className="text-sm text-muted-foreground">
+        {label}
+      </p>
+      <p className="text-xl font-bold mt-2">
+        {value}
+      </p>
     </div>
   );
 }
