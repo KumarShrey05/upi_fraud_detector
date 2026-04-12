@@ -4,168 +4,212 @@ import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/Bottom-nav';
-import { AlertTriangle, XCircle, CheckCircle2, Filter } from 'lucide-react';
+import {
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles,
+  Activity,
+  TrendingUp,
+  AlertTriangle
+} from 'lucide-react';
 
 export default function FraudListPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [frauds, setFrauds] = useState([]);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [insights, setInsights] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // ✅ FETCH REAL DATA
   useEffect(() => {
-    fetch('http://localhost:5000/fraud-transactions')
-      .then((res) => res.json())
-      .then((data) => setFrauds(data))
-      .catch((err) => console.log(err));
+    const fetchInsights = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/fraud-insights');
+        const data = await res.json();
+        setInsights(data);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInsights();
   }, []);
 
-  // ✅ FILTER LOGIC
-  const filteredTransactions =
-    filterStatus === 'all'
-      ? frauds
-      : frauds.filter((t) => t.status === filterStatus);
+  const getThreatColor = () => {
+    if (!insights?.threatLevel) return 'bg-gray-500';
 
-  // ✅ ICONS
-  const getStatusIcon = (status) => {
-    if (status === 'blocked')
-      return <XCircle className="w-5 h-5 text-destructive" />;
-    if (status === 'otp_required')
-      return <AlertTriangle className="w-5 h-5 text-warning" />;
-    if (status === 'success')
-      return <CheckCircle2 className="w-5 h-5 text-success" />;
+    if (insights.threatLevel === 'HIGH') return 'bg-red-500';
+    if (insights.threatLevel === 'MEDIUM') return 'bg-yellow-500';
+
+    return 'bg-green-500';
   };
+
+  if (loading) {
+    return (
+      <div className="p-10 text-center">
+        Loading fraud insights...
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
-      
-      {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main */}
       <div className="flex-1 flex flex-col">
-        
-        {/* Topbar */}
-        <Topbar
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          userName="Admin"
-        />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-          <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+          <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
 
-            {/* Header */}
-            <div>
-              <h1 className="text-3xl font-bold">Fraud & Security</h1>
-              <p className="text-muted-foreground">
-                Monitor blocked transactions
-              </p>
-            </div>
+            {/* HERO */}
+            <div className="relative overflow-hidden rounded-[32px] border border-white/20 backdrop-blur-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8 shadow-2xl min-h-[320px]">
+              <div className="absolute top-10 right-10 w-44 h-44 rounded-full bg-white/10 blur-3xl" />
+              <div className="absolute bottom-10 left-10 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
 
-            {/* Stats */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-card border rounded-2xl p-4">
-                <p className="text-sm">Blocked</p>
-                <p className="text-2xl font-bold text-red-500">
-                  {frauds.filter((t) => t.status === 'blocked').length}
-                </p>
-              </div>
+              <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <p className="text-sm tracking-[0.3em] uppercase text-white/60">
+                    Fraud Protection Center
+                  </p>
 
-              <div className="bg-card border rounded-2xl p-4">
-                <p className="text-sm">OTP Required</p>
-                <p className="text-2xl font-bold text-yellow-500">
-                  {frauds.filter((t) => t.status === 'otp_required').length}
-                </p>
-              </div>
+                  <div className="flex items-center gap-3 mt-4">
+                    <h1 className="text-4xl font-bold">
+                      Threat Level
+                    </h1>
 
-              <div className="bg-card border rounded-2xl p-4">
-                <p className="text-sm">Safe</p>
-                <p className="text-2xl font-bold text-green-500">
-                  {frauds.filter((t) => t.status === 'success').length}
-                </p>
-              </div>
-            </div>
-
-            {/* Filter */}
-            <div className="bg-card border rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Filter className="w-4 h-4" />
-                <p className="font-medium">Filter</p>
-              </div>
-
-              <div className="flex gap-2">
-                {['all', 'blocked', 'otp_required', 'success'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setFilterStatus(status)}
-                    className={`px-3 py-1 rounded ${
-                      filterStatus === status
-                        ? 'bg-primary text-white'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* List */}
-            <div className="space-y-3">
-              {filteredTransactions.length > 0 ? (
-                filteredTransactions.map((txn, i) => (
-                  <div
-                    key={i}
-                    className="bg-card border rounded-xl p-4 flex justify-between"
-                  >
-                    <div className="flex gap-3">
-                      {getStatusIcon(txn.status)}
-
-                      <div>
-                        <p className="font-semibold">
-                          {txn.sender} → {txn.receiver}
-                        </p>
-
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(txn.time).toLocaleString()}
-                        </p>
-
-                        <p className="text-xs text-muted-foreground">
-                          {txn.reason}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="font-bold">
-                        ₹{Number(txn.amount).toLocaleString('en-IN')}
-                      </p>
-
-                      <p className="text-xs">{txn.status}</p>
-                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm ${getThreatColor()}`}>
+                      {insights?.threatLevel}
+                    </span>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  No fraud transactions
+
+                  <p className="mt-4 text-white/70 leading-7">
+                    Total monitored transactions: {insights?.totalCount || 0}<br />
+                    High risk transactions: {insights?.highRiskCount || 0}<br />
+                    Risk ratio: {insights?.riskRatio || 0}%<br />
+                    Avg suspicious amount: ₹{insights?.avgAmount || 0}
+                  </p>
+
+                  <div className="flex gap-4 mt-6 flex-wrap">
+                    <GlassStat icon={<ShieldAlert />} label="Blocked" value={insights?.blockedCount || 0} />
+                    <GlassStat icon={<ShieldCheck />} label="Safe" value={insights?.safeCount || 0} />
+                    <GlassStat icon={<Sparkles />} label="OTP" value={insights?.otpCount || 0} />
+                  </div>
                 </div>
-              )}
+
+                <div className="flex justify-center">
+                  <div className="relative w-52 h-52 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center shadow-2xl animate-pulse">
+                    <div className="absolute w-40 h-40 rounded-full border border-white/30" />
+                    <div className="absolute w-28 h-28 rounded-full border border-white/40" />
+                    <Shield className="w-14 h-14" />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Warning */}
-            <div className="bg-yellow-100 border border-yellow-300 rounded-xl p-4 flex gap-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-600" />
-              <p className="text-sm">
-                Never share OTP or personal details with anyone.
-              </p>
+            {/* ANALYTICS */}
+            <div className="grid md:grid-cols-2 gap-5">
+              <div className="rounded-3xl border p-6 bg-card shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-5 h-5" />
+                  <h2 className="text-xl font-semibold">
+                    Live Fraud Analytics
+                  </h2>
+                </div>
+
+                <div className="space-y-4 text-sm">
+                  <StoryLine text={`${insights?.blockedCount || 0} blocked attempts`} />
+                  <StoryLine text={`${insights?.otpCount || 0} OTP verifications`} />
+                  <StoryLine text={`${insights?.highRiskCount || 0} high-risk transactions`} />
+                  <StoryLine text={`₹${insights?.totalAmount || 0} total monitored amount`} />
+                </div>
+              </div>
+
+              <div className="rounded-3xl border p-6 bg-card shadow-sm">
+                <h2 className="text-xl font-semibold mb-5">
+                  Protection Score
+                </h2>
+
+                <p className="text-4xl font-bold mt-2">
+                  {insights?.protectionScore || 0}%
+                </p>
+
+                <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-3 rounded-full bg-primary transition-all duration-700"
+                    style={{
+                      width: `${insights?.protectionScore || 0}%`
+                    }}
+                  />
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <MiniMetric label="Total Amount" value={`₹${insights?.totalAmount || 0}`} />
+                  <MiniMetric label="Avg Amount" value={`₹${insights?.avgAmount || 0}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* LATEST */}
+            <div className="rounded-3xl border p-6 bg-gradient-to-r from-background to-muted/40 shadow-sm">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="w-5 h-5 mt-1" />
+
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    Latest Fraud Insight
+                  </h3>
+
+                  <p className="text-sm text-muted-foreground mt-2 leading-7">
+                    {insights?.latestTransaction
+                      ? `₹${insights.latestTransaction.amount} from ${insights.latestTransaction.sender} to ${insights.latestTransaction.receiver}`
+                      : 'No suspicious transactions found'}
+                  </p>
+
+                  {insights?.latestTransaction?.time && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(insights.latestTransaction.time).toLocaleString('en-IN')}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
           </div>
         </main>
       </div>
 
-      {/* Bottom Nav */}
       <BottomNav />
+    </div>
+  );
+}
+
+function GlassStat({ icon, label, value }) {
+  return (
+    <div className="rounded-2xl bg-white/10 px-4 py-3 border border-white/10 min-w-[90px]">
+      <div className="flex items-center gap-2 text-white/80">
+        {icon}
+        <span className="text-xs">{label}</span>
+      </div>
+      <p className="text-xl font-bold mt-2">{value}</p>
+    </div>
+  );
+}
+
+function StoryLine({ text }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-2 h-2 rounded-full bg-primary" />
+      <p>{text}</p>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value }) {
+  return (
+    <div className="rounded-2xl border p-4">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-xl font-bold mt-2">{value}</p>
     </div>
   );
 }

@@ -598,6 +598,97 @@ app.post("/verify-otp", async (req, res) => {
   }
 });
 
+// Fraud insights API
+app.get('/fraud-insights', async (req, res) => {
+  try {
+    const [transactions] = await db.query(`
+      SELECT *
+      FROM transactions
+      ORDER BY time DESC
+    `);
+
+    const totalCount = transactions.length;
+
+    const blockedCount = transactions.filter(
+      (txn) =>
+        txn.status?.toLowerCase() === 'blocked'
+    ).length;
+
+    const otpCount = transactions.filter(
+      (txn) =>
+        txn.reason
+          ?.toLowerCase()
+          .includes('otp')
+    ).length;
+
+    const safeCount = transactions.filter(
+      (txn) =>
+        txn.status?.toLowerCase() === 'success' || txn.status?.toLowerCase() === 'completed').length;
+
+    const totalAmount = transactions.reduce(
+      (sum, txn) =>
+        sum + Number(txn.amount || 0),
+      0
+    );
+
+    const avgAmount =
+      totalCount > 0
+        ? Math.round(
+            totalAmount / totalCount
+          )
+        : 0;
+
+    const highRiskCount =
+      transactions.filter(
+        (txn) =>
+          Number(txn.amount || 0) >=
+          10000
+      ).length;
+
+    const riskRatio =
+      totalCount > 0
+        ? (
+            ((blockedCount +
+              highRiskCount) /
+              totalCount) *
+            100
+          )
+        : 0;
+
+    let threatLevel = 'LOW';
+
+    if (riskRatio >= 40) {
+      threatLevel = 'HIGH';
+    } else if (riskRatio >= 15) {
+      threatLevel = 'MEDIUM';
+    }
+
+    const protectionScore = Math.max(
+      100 - Math.round(riskRatio),
+      0
+    );
+
+    const latestTransaction =
+      totalCount > 0
+        ? transactions[0]
+        : null;
+
+    res.json({ blockedCount, otpCount, safeCount, totalCount, totalAmount, avgAmount, highRiskCount, riskRatio: Math.round(
+        riskRatio ), threatLevel, protectionScore, latestTransaction,
+    });
+  } catch (error) {
+    console.error(
+      'Fraud insights error:',
+      error
+    );
+
+    res.status(500).json({
+      error:
+        'Failed to fetch fraud insights',
+    });
+  }
+});
+
 const PORT = 5000;
 
 const server = http.createServer(app);
