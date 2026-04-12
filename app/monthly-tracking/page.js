@@ -1,126 +1,344 @@
 'use client';
 
-import { useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, TrendingUp, Calendar } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/Bottom-nav';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from 'recharts';
 
-const monthlyData = [
-  { month: 'Jan', sent: 8500, received: 3200 },
-  { month: 'Feb', sent: 12000, received: 4500 },
-  { month: 'Mar', sent: 10200, received: 5100 },
-  { month: 'Apr', sent: 15000, received: 6800 },
-];
-
-const categoryData = [
-  { name: 'Groceries', value: 8500 },
-  { name: 'Utilities', value: 5200 },
-  { name: 'Entertainment', value: 3800 },
-  { name: 'Food & Dining', value: 7300 },
-  { name: 'Others', value: 4200 },
-];
-
-const COLORS = ['#2563eb', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+const COLORS = ['#6366f1', '#22c55e', '#ef4444', '#f59e0b'];
 
 export default function MonthlyTrackingPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState('Apr');
+  const { user } = useUser();
 
-  const totalSent = monthlyData.reduce((sum, d) => sum + d.sent, 0);
-  const totalReceived = monthlyData.reduce((sum, d) => sum + d.received, 0);
-  const currentMonthData = monthlyData.find(d => d.month === selectedMonth);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [duration, setDuration] = useState('3');
+
+  const currentUpi = user
+    ? `${user.primaryEmailAddress.emailAddress.split('@')[0]}@upi`
+    : '';
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchTransactions = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/transactions/${currentUpi}`
+        );
+        const data = await res.json();
+        setTransactions(data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchTransactions();
+  }, [user, currentUpi]);
+
+  const filteredTransactions = useMemo(() => {
+    const monthsBack = Number(duration);
+    const cutoff = new Date();
+
+    cutoff.setDate(1);
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setMonth(cutoff.getMonth() - monthsBack + 1);
+
+    return transactions.filter(
+      (txn) => new Date(txn.time) >= cutoff
+    );
+  }, [transactions, duration]);
+
+  const monthlyData = useMemo(() => {
+    const monthsBack = Number(duration);
+    const result = [];
+
+    for (let i = monthsBack - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(1);
+      date.setMonth(date.getMonth() - i);
+
+      const monthKey = date.toLocaleString('en-IN', {
+        month: 'short',
+      });
+
+      result.push({
+        month: monthKey,
+        sent: 0,
+        received: 0,
+      });
+    }
+
+    filteredTransactions.forEach((txn) => {
+      const txnDate = new Date(txn.time);
+      const txnMonth = txnDate.toLocaleString('en-IN', {
+        month: 'short',
+      });
+
+      const monthEntry = result.find(
+        (item) => item.month === txnMonth
+      );
+
+      if (!monthEntry) return;
+
+      if (txn.sender === currentUpi) {
+        monthEntry.sent += Number(txn.amount);
+      }
+
+      if (txn.receiver === currentUpi) {
+        monthEntry.received += Number(txn.amount);
+      }
+    });
+
+    return result;
+  }, [filteredTransactions, currentUpi, duration]);
+
+  const totalSent = filteredTransactions
+    .filter((txn) => txn.sender === currentUpi)
+    .reduce((sum, txn) => sum + Number(txn.amount), 0);
+
+  const totalReceived = filteredTransactions
+    .filter((txn) => txn.receiver === currentUpi)
+    .reduce((sum, txn) => sum + Number(txn.amount), 0);
+
+  const blockedCount = filteredTransactions.filter(
+    (txn) => txn.status === 'blocked'
+  ).length;
+
+  const otpCount = filteredTransactions.filter(
+    (txn) =>
+      txn.reason?.toLowerCase().includes('otp')
+  ).length;
+
+  const avgTxn =
+    filteredTransactions.length > 0
+      ? Math.round(
+          filteredTransactions.reduce(
+            (sum, txn) =>
+              sum + Number(txn.amount),
+            0
+          ) / filteredTransactions.length
+        )
+      : 0;
+
+  const highestSent =
+    filteredTransactions
+      .filter(
+        (txn) => txn.sender === currentUpi
+      )
+      .reduce(
+        (max, txn) =>
+          Math.max(max, Number(txn.amount)),
+        0
+      ) || 0;
+
+  const pieData = [
+    { name: 'Sent', value: totalSent },
+    { name: 'Received', value: totalReceived },
+    { name: 'Blocked', value: blockedCount },
+    { name: 'OTP', value: otpCount },
+  ];
+
+  const maxMetricValue = Math.max(
+  avgTxn,
+  highestSent,
+  blockedCount,
+  otpCount,
+  1
+);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
-      
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      {/* Main */}
       <div className="flex-1 flex flex-col">
-        
-        {/* Topbar */}
         <Topbar
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          userName="Monthly Tracking"
+          onMenuClick={() =>
+            setSidebarOpen(true)
+          }
         />
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-          <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
-
-            {/* Header */}
-            <div>
-              <h1 className="text-3xl font-bold">Monthly Tracking</h1>
-              <p className="text-muted-foreground">
-                Analyze your spending and income
-              </p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-card border rounded-2xl p-4">
-                <p>Total Sent</p>
-                <p className="text-xl font-bold">₹{totalSent}</p>
-              </div>
-
-              <div className="bg-card border rounded-2xl p-4">
-                <p>Total Received</p>
-                <p className="text-xl font-bold">₹{totalReceived}</p>
-              </div>
-
-              <div className="bg-card border rounded-2xl p-4">
-                <p>Net Flow</p>
-                <p className="text-xl font-bold">
-                  ₹{totalSent - totalReceived}
+          <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">
+                  Monthly Tracking
+                </h1>
+                <p className="text-muted-foreground">
+                  Smart analytics dashboard
                 </p>
               </div>
+
+              <select
+                value={duration}
+                onChange={(e) =>
+                  setDuration(e.target.value)
+                }
+                className="border rounded-xl px-4 py-2 bg-card"
+              >
+                <option value="1">1 Month</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12">12 Months</option>
+              </select>
             </div>
 
-            {/* Bar Chart */}
-            <div className="bg-card border rounded-2xl p-6">
-              <h2 className="font-bold mb-4">Monthly Data</h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="md:col-span-2 bg-card border rounded-2xl p-4">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
 
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="sent" fill="#6366f1" />
-                  <Bar dataKey="received" fill="#22c55e" />
-                </BarChart>
-              </ResponsiveContainer>
+                    <Bar
+                      dataKey="sent"
+                      fill="#6366f1"
+                      barSize={40}
+                      radius={[8, 8, 0, 0]}
+                      animationDuration={400}
+                    />
+
+                    <Bar
+                      dataKey="received"
+                      fill="#22c55e"
+                      barSize={40}
+                      radius={[8, 8, 0, 0]}
+                      animationDuration={450}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="bg-card border rounded-2xl p-4">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      outerRadius={90}
+                      innerRadius={45}
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            {/* Pie Chart */}
-            <div className="bg-card border rounded-2xl p-6">
-              <h2 className="font-bold mb-4">Categories</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+<MetricCard
+  label="Avg Txn"
+  value={`₹${avgTxn}`}
+  progress={Math.max(
+    Math.min((avgTxn / 5000) * 100, 100),
+    20
+  )}
+/>
 
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie data={categoryData} dataKey="value">
-                    {categoryData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+<MetricCard
+  label="Highest Sent"
+  value={`₹${highestSent}`}
+  progress={Math.max(
+    Math.min((highestSent / 15000) * 100, 100),
+    25
+  )}
+/>
+
+<MetricCard
+  label="Blocked"
+  value={blockedCount}
+  progress={Math.max(
+    Math.min((blockedCount / 30) * 100, 100),
+    15
+  )}
+/>
+
+<MetricCard
+  label="OTP Verified"
+  value={otpCount}
+  progress={Math.max(
+    Math.min((otpCount / 30) * 100, 100),
+    15
+  )}
+/>
             </div>
 
+            {/* Unique bottom tiles */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <InfoTile
+                title="Cash Flow"
+                text={`₹${totalReceived - totalSent} net balance in selected period`}
+              />
+              <InfoTile
+                title="Security"
+                text={`${blockedCount === 0 ? 'No fraud alerts' : blockedCount + ' alerts detected'}`}
+              />
+              <InfoTile
+                title="Activity"
+                text={`${filteredTransactions.length} total transactions`}
+              />
+            </div>
           </div>
         </main>
       </div>
 
-      {/* Bottom Nav */}
       <BottomNav />
+    </div>
+  );
+}
+
+function MetricCard({ label, value, progress = 0 }) {
+  return (
+    <div className="bg-card border rounded-3xl p-6 min-h-[150px] flex flex-col justify-between shadow-sm">
+      <p className="text-sm text-muted-foreground">
+        {label}
+      </p>
+
+      <p className="text-2xl font-bold mt-4">
+        {value}
+      </p>
+
+      <div className="mt-4 h-2 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-2 rounded-full bg-primary transition-all duration-500"
+          style={{
+            width: `${Math.min(progress, 100)}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function InfoTile({ title, text }) {
+  return (
+    <div className="rounded-3xl border p-6 bg-card shadow-sm min-h-[130px]">
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="mt-3 text-sm text-muted-foreground">{text}</p>
     </div>
   );
 }

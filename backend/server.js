@@ -233,7 +233,7 @@ app.post("/send-money", async (req, res) => {
       amt > 0.5 * senderBalance ||
       mlResult.status === "medium_risk" ||
       mlResult.status === "high_risk"
-    ) {
+    ) {//OTP sent to mail id
       const otp = Math.floor(100000 + Math.random() * 900000);
       await resend.emails.send({
         from: "onboarding@resend.dev",
