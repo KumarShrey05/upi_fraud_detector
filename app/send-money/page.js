@@ -78,23 +78,46 @@ export default function SendMoneyPage() {
       );
   }, []);
 
-  const syncReceiverFields = (value, type) => {
-    if (!value) {
-      setUpiId('');
-      setReceiverName('');
-      return;
-    }
+
+const syncReceiverFields = async (value, type) => {
+  if (!value?.trim()) {
+    setUpiId('');
+    setReceiverName('');
+    return;
+  }
+
+  try {
+    let res, data;
 
     if (type === 'upi') {
-      setReceiverName(
-        value.split('@')[0]
+      res = await fetch(
+        `http://localhost:5000/user/${encodeURIComponent(value)}`
       );
+
+      if (!res.ok) return;
+
+      data = await res.json();
+
+      if (data?.name) {
+        setReceiverName(data.name);
+      }
     } else {
-      const clean =
-        value.toLowerCase().replace(/\s+/g, '');
-      setUpiId(`${clean}@upi`);
+      res = await fetch(
+        `http://localhost:5000/user/search/${encodeURIComponent(value)}`
+      );
+
+      if (!res.ok) return;
+
+      data = await res.json();
+
+      if (data?.upiId) {
+        setUpiId(data.upiId);
+      }
     }
-  };
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   const showToastMessage = (
     message,
@@ -247,32 +270,23 @@ export default function SendMoneyPage() {
     calculateRisk(upiId, value);
   };
 
-  const handleUpiChange = (
-    e
-  ) => {
-    const value = e.target.value;
-    setUpiId(value);
-    syncReceiverFields(
-      value,
-      'upi'
-    );
-    updateSuggestions(value);
-    calculateRisk(
-      value,
-      amount
-    );
-  };
+const handleUpiChange = async (e) => {
+  const value = e.target.value;
+  setUpiId(value);
 
-  const handleNameChange = (
-    e
-  ) => {
-    const value = e.target.value;
-    setReceiverName(value);
-    syncReceiverFields(
-      value,
-      'name'
-    );
-  };
+  await syncReceiverFields(value, 'upi');
+
+  updateSuggestions(value);
+  calculateRisk(value, amount);
+};
+
+const handleNameChange = async (e) => {
+  const value = e.target.value;
+  setReceiverName(value);
+
+  await syncReceiverFields(value, 'name');
+};
+
 
   const resetForm = () => {
     setUpiId('');
@@ -393,10 +407,10 @@ export default function SendMoneyPage() {
         />
 
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0 flex items-center justify-center">
-          <div className="w-full max-w-md p-4 sm:p-6">
-            <div className="space-y-6">
+          <div className="w-full max-w-md p-4 sm:p-6 ">
+            <div className="space-y-6 ">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">
+                <h1 className="text-3xl font-bold text-foreground ">
                   Send Money
                 </h1>
                 <p className="text-muted-foreground mt-2">
@@ -404,7 +418,7 @@ export default function SendMoneyPage() {
                 </p>
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-4 ">
 
                 {/* Receiver Name */}
                 <div>
@@ -440,6 +454,24 @@ export default function SendMoneyPage() {
                     }
                     className="rounded-lg"
                   />
+{showSuggestions && suggestions.length > 0 && (
+  <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden">
+    {suggestions.map((item, index) => (
+      <button
+        key={index}
+        type="button"
+        onClick={() => {
+          setUpiId(item);
+          syncReceiverFields(item, 'upi');
+          setShowSuggestions(false);
+        }}
+        className="w-full text-left px-4 py-3 hover:bg-muted cursor-pointer transition"
+      >
+        {item}
+      </button>
+    ))}
+  </div>
+)}
                 </div>
 
                 {/* Amount */}
@@ -480,7 +512,7 @@ export default function SendMoneyPage() {
                 onClick={
                   handleSendMoney
                 }
-                className="w-full h-12 rounded-lg font-semibold"
+                className="w-full h-12 rounded-lg font-semibold cursor-pointer"
               >
                 Send Money
               </Button>
@@ -488,6 +520,97 @@ export default function SendMoneyPage() {
           </div>
         </main>
       </div>
+{toast.show && (
+  <div
+    className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white ${
+      toast.type === 'success'
+        ? 'bg-green-600'
+        : 'bg-red-600'
+    } ${toastClosing ? 'toast-out' : 'toast-edge-slide'}`}
+  >
+    {toast.message}
+  </div>
+)}
+
+<AlertDialog open={showOTP}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>
+        OTP Verification Required
+      </AlertDialogTitle>
+      <AlertDialogDescription>
+        High risk transaction detected.
+        Please verify OTP to continue.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+
+<div className="space-y-4">
+  <Input
+    type="text"
+    placeholder="Enter OTP sent to your email"
+    value={otp}
+    onChange={(e) => setOtp(e.target.value)}
+    className="rounded-lg"
+  />
+</div>
+
+
+    <div className="flex gap-2 mt-4">
+      <AlertDialogCancel
+        onClick={() => {
+          setShowOTP(false);
+          setOtp('');
+        }}
+      >
+        Cancel
+      </AlertDialogCancel>
+
+      <AlertDialogAction
+        onClick={async () => {
+          try {
+            const res = await fetch(
+              'http://localhost:5000/verify-otp',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                
+body: JSON.stringify({
+  sender:
+    user.primaryEmailAddress.emailAddress.split('@')[0] + '@upi',
+  receiver: upiId,
+  amount: Number(amount),
+  note,
+  otp,
+  email: user.primaryEmailAddress.emailAddress,
+}),
+              }
+            );
+
+            const data = await res.json();
+
+            if (data.status === 'success') {
+              showToastMessage('Money sent successfully!');
+              playSound('success');
+              resetForm();
+            } else {
+              showToastMessage('Invalid OTP', 'error');
+              playSound('error');
+            }
+
+            setShowOTP(false);
+            setOtp('');
+          } catch {
+            showToastMessage('OTP verification failed', 'error');
+          }
+        }}
+      >
+        Verify
+      </AlertDialogAction>
+    </div>
+  </AlertDialogContent>
+</AlertDialog>
 
       <BottomNav />
     </div>

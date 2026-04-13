@@ -208,7 +208,7 @@ export function Topbar(props = {}) {
           </div>
 
           {/* RIGHT */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ">
             <div
               className="relative"
               ref={notificationRef}
@@ -219,17 +219,17 @@ export function Topbar(props = {}) {
                     !showNotifications
                   )
                 }
-                className="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition"
+                className="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition cursor-pointer"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-5 h-5 " />
 
                 {notifications.length > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full " />
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg p-4 z-50">
+                <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg p-4 z-50 ">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="font-semibold">
                       Notifications
@@ -243,7 +243,7 @@ export function Topbar(props = {}) {
                     </button>
                   </div>
 
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                  <div className="space-y-3 max-h-80 overflow-y-auto ">
                     {notifications.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No notifications

@@ -131,13 +131,18 @@ export function FrequentContacts() {
     fetchContacts();
   }, [user, isLoaded]);
 
-  const handleContactClick = (
-    contact
-  ) => {
-    router.push(
-      `/send-money?contact=${contact.upiId}`
-    );
-  };
+const handleContactClick = (
+  contact
+) => {
+  router.push(
+    `/send-money?receiver=${encodeURIComponent(
+      contact.upiId
+    )}&name=${encodeURIComponent(
+      contact.name
+    )}`
+  );
+};
+
 
   return (
     <div className="space-y-4">
@@ -149,7 +154,7 @@ export function FrequentContacts() {
 
         <Link
           href="/contacts"
-          className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm font-medium"
+          className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm font-medium "
         >
           See More
           <ArrowRight className="w-4 h-4" />
@@ -180,7 +185,7 @@ export function FrequentContacts() {
                 className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-muted transition-colors group"
               >
                 <div
-                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${contact.color} flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow`}
+                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${contact.color} flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow cursor-pointer`}
                 >
                   {
                     contact.initials

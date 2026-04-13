@@ -1,17 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Moon,
-  Sun,
-  LogOut,
-  X,
-  HelpCircle,
-  Shield,
-  Info,
-} from 'lucide-react';
+import { Moon, Sun, LogOut, X, HelpCircle, Shield, Info, } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useClerk } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/Bottom-nav';
@@ -35,6 +27,7 @@ export default function SettingsPage() {
 
   const router = useRouter();
   const { signOut } = useClerk();
+  const { isSignedIn } = useUser();
 
   useEffect(() => {
     const savedTheme =
@@ -101,13 +94,12 @@ export default function SettingsPage() {
     feature
   ) => {
     showToastMessage(
-      `${feature} — Stay tuned, coming soon 🚀`
+      `${feature} - Stay tuned, coming soon...`
     );
   };
 
   const handleLogout = async () => {
-    await signOut();
-    router.push('/sign-in');
+    await signOut({ redirectUrl: '/login' });
   };
 
   return (
@@ -168,18 +160,16 @@ export default function SettingsPage() {
                   onClick={
                     handleDarkModeToggle
                   }
-                  className={`cursor-pointer relative w-12 h-6 rounded-full transition-colors ${
-                    darkMode
+                  className={`cursor-pointer relative w-12 h-6 rounded-full transition-colors ${darkMode
                       ? 'bg-blue-600'
                       : 'bg-gray-300'
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      darkMode
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${darkMode
                         ? 'translate-x-6'
                         : ''
-                    }`}
+                      }`}
                   />
                 </button>
               </div>
@@ -253,22 +243,24 @@ export default function SettingsPage() {
                 <Info className="w-5 h-5" />
               }
             >
-<div className="space-y-2 text-sm text-muted-foreground leading-6 tracking-wide">
-  <p>Version: 1.0.0</p>
-  <p>Release: Stable</p>
-  <p>Security Engine: Active</p>
-  <p>Developed by Kumar Shrey</p>
-</div>
+              <div className="space-y-2 text-sm text-muted-foreground leading-6 tracking-wide">
+                <p>Version: 1.0.0</p>
+                <p>Release: Stable</p>
+                <p>Security Engine: Active</p>
+                <p>Developed by Kumar Shrey</p>
+              </div>
             </Card>
 
             {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className="w-full bg-red-600 text-white rounded-2xl py-4 font-semibold flex items-center justify-center gap-2 cursor-pointer hover:opacity-90 transition-all"
-            >
-              <LogOut className="w-5 h-5" />
-              Logout
-            </button>
+            {isSignedIn && (
+              <button
+                onClick={handleLogout}
+                className="w-full bg-red-600 text-white rounded-2xl py-4 font-semibold flex items-center justify-center gap-2 cursor-pointer hover:opacity-90 transition-all"
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </button>
+            )}
           </div>
         </main>
       </div>
@@ -283,8 +275,8 @@ export default function SettingsPage() {
               ? 'FAQs'
               : activeModal ===
                 'privacy'
-              ? 'Privacy Policy'
-              : 'Terms & Conditions'
+                ? 'Privacy Policy'
+                : 'Terms & Conditions'
           }
           onClose={() =>
             setActiveModal(null)
@@ -295,31 +287,29 @@ export default function SettingsPage() {
           )}
           {activeModal ===
             'privacy' && (
-            <PrivacyContent />
-          )}
+              <PrivacyContent />
+            )}
           {activeModal ===
             'terms' && (
-            <TermsContent />
-          )}
+              <TermsContent />
+            )}
         </Modal>
       )}
 
       {/* Toast */}
       {toast.show && (
         <div
-          className={`fixed top-20 right-0 z-50 ${
-            toastClosing
+          className={`fixed top-20 right-0 z-50 ${toastClosing
               ? 'toast-out'
               : 'toast-edge-slide'
-          }`}
+            }`}
         >
           <div
-            className={`w-80 border-l border-t border-b shadow-2xl px-4 py-3 ${
-              toast.type ===
-              'error'
+            className={`w-80 border-l border-t border-b shadow-2xl px-4 py-3 ${toast.type ===
+                'error'
                 ? 'bg-red-600/95 border-red-500 text-white'
                 : 'bg-green-600/95 border-green-500 text-white'
-            }`}
+              }`}
           >
             <p className="text-sm font-semibold">
               {toast.message}

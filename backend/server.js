@@ -485,6 +485,31 @@ app.put("/user/:upiId", async (req, res) => {
   }
 });
 
+// Search user by name
+app.get("/user/search/:name", async (req, res) => {
+  const { name } = req.params;
+
+  try {
+    const [rows] = await db.query(
+      "SELECT name, upiId FROM users WHERE LOWER(name) = LOWER(?) LIMIT 1",
+      [name]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.log("Name search error:", err);
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
+});
+
 // Fetch user by EMAIL
 app.get("/user/email/:email", async (req, res) => {
   const { email } = req.params;

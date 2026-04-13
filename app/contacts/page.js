@@ -64,14 +64,32 @@ export default function ContactsPage() {
             (map[other] || 0) + 1;
         });
 
-        const sorted = Object.entries(map)
-          .sort((a, b) => b[1] - a[1])
-          .map(
-            ([upiId, count]) => ({
-              upiId,
-              transactions: count,
+        const sorted = await Promise.all(
+          Object.entries(map)
+            .sort((a, b) => b[1] - a[1])
+            .map(async ([upiId, count]) => {
+              let name = '';
+
+              try {
+                const userRes = await fetch(
+                  `http://localhost:5000/user/${encodeURIComponent(upiId)}`
+                );
+
+                if (userRes.ok) {
+                  const userData = await userRes.json();
+                  name = userData?.name || '';
+                }
+              } catch (e) {
+                console.log(e);
+              }
+
+              return {
+                upiId,
+                name,
+                transactions: count,
+              };
             })
-          );
+        );
 
         setContacts(sorted);
       } catch (error) {
@@ -92,14 +110,16 @@ export default function ContactsPage() {
     );
 
   const handleContactClick = (
-    upiId
+    upiId,
+    name
   ) => {
     router.push(
       `/send-money?receiver=${encodeURIComponent(
         upiId
-      )}`
+      )}&name=${encodeURIComponent(name)}`
     );
   };
+
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -163,7 +183,7 @@ export default function ContactsPage() {
             </div>
 
             {filteredContacts.length >
-            0 ? (
+              0 ? (
               <div className="space-y-3">
                 {filteredContacts.map(
                   (c, i) => (
@@ -171,15 +191,22 @@ export default function ContactsPage() {
                       key={i}
                       onClick={() =>
                         handleContactClick(
-                          c.upiId
+                          c.upiId,
+                          c.name
                         )
                       }
-                      className="w-full flex items-center justify-between rounded-2xl border bg-card p-4 shadow-sm hover:bg-muted transition"
+                      className="w-full flex items-center justify-between rounded-2xl border bg-card p-4 shadow-sm hover:bg-muted transition cursor-pointer"
                     >
                       <div className="text-left">
-                        <p className="font-semibold text-base">
-                          {c.upiId}
-                        </p>
+<div>
+  <p className="font-semibold text-base">
+    {c.name || c.upiId}
+  </p>
+  <p className="text-sm text-muted-foreground">
+    {c.upiId}
+  </p>
+</div>
+
 
                         <p className="text-sm text-muted-foreground mt-1">
                           {

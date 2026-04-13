@@ -149,7 +149,7 @@ export default function BalancePage() {
 </div>
 
             {/* CAPTCHA CARD */}
-<div className="rounded-[26px] border border-slate-200 bg-white shadow-lg p-5 sm:p-6 w-full">  <div className="flex items-center gap-3 mb-5">
+<div className="rounded-[26px] border border-border bg-card text-card-foreground shadow-lg p-5 sm:p-6 w-full">  <div className="flex items-center gap-3 mb-5">
     <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
       <Lock className="w-5 h-5" />
     </div>
@@ -178,7 +178,7 @@ export default function BalancePage() {
       value={captchaInput}
       onChange={(e) => setCaptchaInput(e.target.value)}
       placeholder="Type the code above"
-      className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-base outline-none focus:ring-2 focus:ring-primary/20"
+      className="w-full rounded-3xl border border-border bg-background text-foreground placeholder:text-muted-foreground p-4 text-base outline-none focus:ring-2 focus:ring-primary/20"
     />
   </div>
 
@@ -190,7 +190,7 @@ export default function BalancePage() {
 
   <button
     onClick={verifyCaptcha}
-    className="w-full mt-4 rounded-3xl bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 font-medium shadow-md hover:shadow-lg transition"
+    className="w-full mt-4 rounded-3xl bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 font-medium shadow-md hover:shadow-lg transition cursor-pointer"
   >
     Verify & Reveal Balance
   </button>
