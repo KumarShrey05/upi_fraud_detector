@@ -2,7 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Mail, Copy, User, Phone, MapPin, Download, Share2, Pencil } from 'lucide-react';
+import {
+  Mail,
+  Copy,
+  User,
+  Phone,
+  MapPin,
+  Download,
+  Share2,
+  Pencil
+} from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { useToast } from '@/hooks/use-toast';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -60,7 +69,9 @@ export default function ProfilePage() {
         );
 
         const res = await fetch(
-          `http://localhost:5000/api/user/profile/${encodeURIComponent(userData.upiId)}`
+          `http://localhost:5000/api/user/profile/${encodeURIComponent(
+            userData.upiId
+          )}`
         );
 
         const data = await res.json();
@@ -119,9 +130,7 @@ export default function ProfilePage() {
   const handleCopyUPI = async () => {
     if (!user?.upiId) return;
 
-    await navigator.clipboard.writeText(
-      user.upiId
-    );
+    await navigator.clipboard.writeText(user.upiId);
 
     toast({
       title: 'UPI copied',
@@ -129,27 +138,75 @@ export default function ProfilePage() {
     });
   };
 
+  const generateQRBlob = async () => {
+    const svg = qrRef.current?.querySelector('svg');
+    if (!svg || !user) return null;
+
+    const svgData =
+      new XMLSerializer().serializeToString(svg);
+
+    const canvas = document.createElement('canvas');
+    const size = 600;
+    const margin = 60;
+
+    canvas.width = size + margin * 2;
+    canvas.height = size + margin * 2;
+
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const img = new Image();
+
+    return new Promise((resolve) => {
+      img.onload = () => {
+        ctx.drawImage(
+          img,
+          margin,
+          margin,
+          size,
+          size
+        );
+
+        canvas.toBlob(
+          (blob) => resolve(blob),
+          'image/png',
+          1.0
+        );
+      };
+
+      img.src =
+        'data:image/svg+xml;base64,' +
+        btoa(
+          unescape(
+            encodeURIComponent(svgData)
+          )
+        );
+    });
+  };
+
   const handleDownloadQR = async () => {
     if (!user) return;
 
     try {
-      const svg =
-        qrRef.current?.querySelector('svg');
+      const blob = await generateQRBlob();
+      if (!blob) return;
 
-      if (!svg) return;
-
-      const serializer =
-        new XMLSerializer();
-
-      const blob = new Blob(
-        [serializer.serializeToString(svg)],
-        { type: 'image/svg+xml' }
-      );
+      const fileName = `${user.name}-upi-qr.png`;
 
       if ('showSaveFilePicker' in window) {
         const handle =
           await window.showSaveFilePicker({
-            suggestedName: `${user.name}-upi-qr.svg`
+            suggestedName: fileName,
+            types: [
+              {
+                description: 'PNG Image',
+                accept: {
+                  'image/png': ['.png']
+                }
+              }
+            ]
           });
 
         const writable =
@@ -165,13 +222,16 @@ export default function ProfilePage() {
           document.createElement('a');
 
         link.href = url;
-        link.download = `${user.name}-upi-qr.svg`;
+        link.download = fileName;
         link.click();
+
+        URL.revokeObjectURL(url);
       }
 
       toast({
         title: 'QR saved',
-        description: 'Download complete'
+        description:
+          'PNG downloaded successfully'
       });
     } catch (error) {
       if (error.name === 'AbortError')
@@ -182,22 +242,43 @@ export default function ProfilePage() {
   const handleShare = async () => {
     if (!user?.upiId) return;
 
-    const text = `Pay me via UPI: ${user.upiId}`;
+    const blob = await generateQRBlob();
+    if (!blob) return;
 
-    if (navigator.share) {
-      await navigator.share({
-        title: 'UPI ID',
-        text
+    const file = new File(
+      [blob],
+      `${user.name}-upi-qr.png`,
+      { type: 'image/png' }
+    );
+
+    const text = `Please Find my UPI Details
+Name:- ${user.name}
+UPI ID:- ${user.upiId}`;
+
+    try {
+      if (
+        navigator.share &&
+        navigator.canShare?.({
+          files: [file]
+        })
+      ) {
+        await navigator.share({
+          title: 'UPI Details',
+          text,
+          files: [file]
+        });
+      } else {
+        await navigator.clipboard.writeText(
+          text
+        );
+      }
+
+      toast({
+        title: 'Ready to share'
       });
-    } else {
-      await navigator.clipboard.writeText(
-        text
-      );
+    } catch (e) {
+      console.log(e);
     }
-
-    toast({
-      title: 'Ready to share'
-    });
   };
 
   if (loading) {
@@ -209,23 +290,27 @@ export default function ProfilePage() {
   }
 
   const qrValue = user?.upiId
-    ? `upi://pay?pa=${user.upiId}&pn=${encodeURIComponent(user.name || '')}`
+    ? `upi://pay?pa=${user.upiId}&pn=${encodeURIComponent(
+      user.name || ''
+    )}`
     : '';
 
   const completion = user
     ? [
-        user.name,
-        user.email,
-        phone,
-        location
-      ].filter(Boolean).length * 25
+      user.name,
+      user.email,
+      phone,
+      location
+    ].filter(Boolean).length * 25
     : 0;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-background via-background to-primary/5 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
       <Sidebar
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() =>
+          setSidebarOpen(false)
+        }
       />
 
       <div className="flex-1 flex flex-col">
@@ -233,12 +318,13 @@ export default function ProfilePage() {
           onMenuClick={() =>
             setSidebarOpen(!sidebarOpen)
           }
-          userName={user?.name || 'Guest'}
+          userName={
+            user?.name || 'Guest'
+          }
         />
 
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
-
             <div className="bg-gradient-to-br from-primary via-primary/90 to-secondary rounded-2xl p-8 text-center text-white shadow-2xl">
               <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <User className="w-10 h-10" />
@@ -256,7 +342,8 @@ export default function ProfilePage() {
 
               <div className="mt-5">
                 <p className="text-sm">
-                  Profile Completion {completion}%
+                  Profile Completion{' '}
+                  {completion}%
                 </p>
 
                 <div className="mt-2 h-2 rounded-full bg-white/20 overflow-hidden">
@@ -338,19 +425,25 @@ export default function ProfilePage() {
               </div>
 
               <InfoRow
-                icon={<Mail className="w-4 h-4" />}
+                icon={
+                  <Mail className="w-4 h-4" />
+                }
                 label="Email"
                 value={user?.email || ''}
               />
 
               <InfoRow
-                icon={<Phone className="w-4 h-4" />}
+                icon={
+                  <Phone className="w-4 h-4" />
+                }
                 label="Phone"
                 value={phone || ''}
               />
 
               <InfoRow
-                icon={<MapPin className="w-4 h-4" />}
+                icon={
+                  <MapPin className="w-4 h-4" />
+                }
                 label="Location"
                 value={location || ''}
               />
@@ -396,7 +489,7 @@ export default function ProfilePage() {
                       onClick={() =>
                         setEditOpen(false)
                       }
-                      className="flex-1 rounded-xl border border-border dark:border-slate-700 p-3 bg-background dark:bg-slate-800"
+                      className="flex-1 rounded-xl border border-border dark:border-slate-700 p-3 bg-background dark:bg-slate-800 hover:scale-[1.05] cursor-pointer hover:shadow-lg transition duration-200"
                     >
                       Cancel
                     </button>
@@ -404,7 +497,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-
           </div>
         </main>
       </div>
@@ -456,17 +548,17 @@ function InfoRow({
   value
 }) {
   return (
-    <div className="rounded-2xl p-4 flex items-center gap-3 transition-all hover:shadow-md bg-muted dark:bg-slate-800/70 dark:hover:bg-slate-800 border border-transparent dark:border-slate-700">
+    <div className="rounded-2xl p-4 flex items-center gap-3 transition-all hover:shadow-md bg-muted dark:bg-slate-800/70 dark:hover:bg-slate-800 border border-transparent dark:border-slate-700 hover:scale-[1.02]">
       <div className="rounded-xl bg-primary/10 text-primary dark:bg-cyan-500/10 dark:text-cyan-400 p-2">
         {icon}
       </div>
 
       <div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground ">
           {label}
         </p>
 
-        <p className="font-medium text-foreground dark:text-slate-100">
+        <p className="font-medium text-foreground dark:text-slate-100 ">
           {value}
         </p>
       </div>
