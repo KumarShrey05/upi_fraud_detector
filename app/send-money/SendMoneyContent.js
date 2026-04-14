@@ -353,6 +353,8 @@ export default function SendMoneyContent() {
 
                 if (!res.ok) {
                     showToastMessage(
+                        data.error ||
+                        data.message ||
                         'Transaction request failed',
                         'error'
                     );

@@ -316,11 +316,15 @@ app.post("/send-money", async (req, res) => {
       status: "success",
       message: "Transaction successful",
     });
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.error(
+      'SEND MONEY ERROR:',
+      error
+    );
+
     return res.status(500).json({
-      status: "failed",
-      message: "Server error",
+      message: 'Server error',
+      error: error.message
     });
   }
 });
