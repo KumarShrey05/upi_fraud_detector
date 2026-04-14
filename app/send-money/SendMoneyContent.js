@@ -266,10 +266,18 @@ export default function SendMoneyContent() {
         const value = e.target.value;
         setUpiId(value);
 
-        await syncReceiverFields(value, 'upi');
-
         updateSuggestions(value);
         calculateRisk(value, amount);
+
+        if (
+            !value ||
+            !value.includes('@upi')
+        ) {
+            setReceiverName('');
+            return;
+        }
+
+        await syncReceiverFields(value, 'upi');
     };
 
     const handleNameChange = async (e) => {
@@ -295,6 +303,24 @@ export default function SendMoneyContent() {
         async () => {
             if (!user || isBlocked)
                 return;
+            if (
+                !upiId ||
+                !upiId.includes('@upi')
+            ) {
+                showToastMessage(
+                    'Please enter valid UPI ID',
+                    'error'
+                );
+                return;
+            }
+
+            if (!amount || Number(amount) <= 0) {
+                showToastMessage(
+                    'Enter valid amount',
+                    'error'
+                );
+                return;
+            }
 
             const sender =
                 user.primaryEmailAddress.emailAddress.split(
@@ -587,6 +613,12 @@ export default function SendMoneyContent() {
                                             }),
                                         }
                                     );
+                                    const data = await res.json();
+
+                                    console.log(
+                                        'SEND MONEY RESPONSE:',
+                                        data
+                                    );
 
                                     if (!res.ok) {
                                         showToastMessage(
@@ -595,8 +627,6 @@ export default function SendMoneyContent() {
                                         );
                                         return;
                                     }
-
-                                    const data = await res.json();
 
                                     if (data.status === 'success') {
                                         showToastMessage('Money sent successfully!');
