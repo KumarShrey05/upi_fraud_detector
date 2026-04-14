@@ -21,6 +21,11 @@ export default function HomePage() {
   const [phone, setPhone] = useState('');
   const [location, setLocation] =
     useState('');
+  const [profileCompleted, setProfileCompleted] =
+    useState(false);
+
+  const [savingProfile, setSavingProfile] =
+    useState(false);
 
   const [toast, setToast] = useState({
     show: false,
@@ -93,8 +98,8 @@ export default function HomePage() {
         }
 
         if (
-          !data.phone ||
-          !data.location
+          !profileCompleted &&
+          (!data.phone || !data.location)
         ) {
           setShowProfileForm(true);
         }
@@ -141,12 +146,16 @@ export default function HomePage() {
   const saveProfileDetails =
     async () => {
       try {
+        setSavingProfile(true);
+
         const upiId =
           localStorage.getItem(
             'upiId'
           );
+
         if (!upiId) return;
-        await fetch(
+
+        const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`,
           {
             method: 'PUT',
@@ -161,12 +170,28 @@ export default function HomePage() {
           }
         );
 
+        if (!res.ok) {
+          showToastMessage(
+            'Failed to save profile',
+            'error'
+          );
+          return;
+        }
+
+        setProfileCompleted(true);
         setShowProfileForm(false);
+
+        showToastMessage(
+          'Profile updated successfully',
+          'success'
+        );
       } catch (error) {
         console.log(
           'Profile save error:',
           error
         );
+      } finally {
+        setSavingProfile(false);
       }
     };
 
@@ -242,12 +267,13 @@ export default function HomePage() {
               />
 
               <button
-                onClick={
-                  saveProfileDetails
-                }
-                className="w-full bg-blue-500 text-white py-3 rounded-xl"
+                onClick={saveProfileDetails}
+                disabled={savingProfile}
+                className="w-full bg-blue-500 text-white py-3 rounded-xl disabled:opacity-50"
               >
-                Save Details
+                {savingProfile
+                  ? 'Saving...'
+                  : 'Save Details'}
               </button>
             </div>
           </div>
