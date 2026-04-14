@@ -98,9 +98,16 @@ app.post("/register", async (req, res) => {
     }
 
     // create new user
+    const [lastUser] = await db.query(
+      "SELECT MAX(id) as maxId FROM users"
+    );
+
+    const nextId =
+      (lastUser[0]?.maxId || 0) + 1;
     await db.query(
-      `INSERT INTO users (id, name, email, phone, location, upiId, balance, created_at) VALUES (NULL, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO users (id, name, email, phone, location, upiId, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
+        nextId,
         name,
         email,
         phone || null,
