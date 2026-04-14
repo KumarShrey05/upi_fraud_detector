@@ -23,15 +23,26 @@ export function FrequentContacts() {
           return;
 
         try {
+          const email =
+            user?.primaryEmailAddress?.emailAddress;
+
+          if (!email) {
+            setContacts([]);
+            return;
+          }
+
           const senderUpi =
-            user.primaryEmailAddress.emailAddress.split(
-              '@'
-            )[0] + '@upi';
+            email.split('@')[0] + '@upi';
 
           const txnRes =
             await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/transactions/${senderUpi}`
             );
+
+          if (!txnRes.ok) {
+            setContacts([]);
+            return;
+          }
 
           const txnData =
             await txnRes.json();
@@ -69,6 +80,23 @@ export function FrequentContacts() {
                   await fetch(
                     `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`
                   );
+
+                if (!userRes.ok) {
+                  return {
+                    id: String(index + 1),
+                    name: 'User',
+                    upiId,
+                    initials: 'U',
+                    color: [
+                      'from-blue-500 to-blue-600',
+                      'from-purple-500 to-purple-600',
+                      'from-pink-500 to-pink-600',
+                      'from-green-500 to-green-600',
+                      'from-orange-500 to-orange-600',
+                      'from-indigo-500 to-indigo-600',
+                    ][index % 6],
+                  };
+                }
 
                 const userData =
                   await userRes.json();

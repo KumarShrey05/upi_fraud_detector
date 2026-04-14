@@ -122,6 +122,11 @@ export default function DashboardPage() {
               )}`
             );
 
+          if (!profileRes.ok) {
+            console.log('Profile fetch failed');
+            return;
+          }
+
           const profileData =
             await profileRes.json();
 
@@ -156,6 +161,11 @@ export default function DashboardPage() {
               `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`
             );
 
+          if (!userRes.ok) {
+            console.log('User fetch failed');
+            return;
+          }
+
           const userData =
             await userRes.json();
 
@@ -163,6 +173,12 @@ export default function DashboardPage() {
             await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`
             );
+
+          if (!txnRes.ok) {
+            console.log('Transactions fetch failed');
+            setTransactions([]);
+            return;
+          }
 
           const txnDataRaw =
             await txnRes.json();
@@ -176,6 +192,11 @@ export default function DashboardPage() {
             await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/fraud-insights/${upiId}`
             );
+
+          if (!insightRes.ok) {
+            console.log('Insights fetch failed');
+            return;
+          }
 
           const insightData =
             await insightRes.json();
@@ -288,10 +309,9 @@ export default function DashboardPage() {
             graphTransactions
           );
 
-          socket.on(
-            'balanceUpdated',
-            fetchDashboardData
-          );
+          socket.on('balanceUpdated', () => {
+            fetchDashboardData();
+          });
         } catch (error) {
           console.log(error);
         }
@@ -300,8 +320,10 @@ export default function DashboardPage() {
     fetchDashboardData();
 
     return () => {
-      if (socket)
+      if (socket) {
+        socket.off('balanceUpdated');
         socket.disconnect();
+      }
     };
   }, [isLoaded, user]);
 

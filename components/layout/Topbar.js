@@ -92,7 +92,7 @@ export function Topbar(props = {}) {
 
   useEffect(() => {
     const socket = io(
-      '${process.env.NEXT_PUBLIC_API_URL}'
+      `${process.env.NEXT_PUBLIC_API_URL}`
     );
 
     const upiId =

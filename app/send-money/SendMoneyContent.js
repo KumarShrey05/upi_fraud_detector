@@ -325,6 +325,14 @@ export default function SendMoneyContent() {
                         }
                     );
 
+                if (!res.ok) {
+                    showToastMessage(
+                        'Transaction request failed',
+                        'error'
+                    );
+                    return;
+                }
+
                 const data =
                     await res.json();
 
@@ -579,6 +587,14 @@ export default function SendMoneyContent() {
                                             }),
                                         }
                                     );
+
+                                    if (!res.ok) {
+                                        showToastMessage(
+                                            'OTP verification failed',
+                                            'error'
+                                        );
+                                        return;
+                                    }
 
                                     const data = await res.json();
 
