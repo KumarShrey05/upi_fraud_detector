@@ -51,6 +51,11 @@ export default function ProfilePage() {
 
         const email =
           clerkUser.primaryEmailAddress?.emailAddress;
+        if (!email) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
 
         const userRes = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`

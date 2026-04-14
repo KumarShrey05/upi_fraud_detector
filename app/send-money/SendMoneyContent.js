@@ -558,9 +558,10 @@ export default function SendMoneyContent() {
 
                         <AlertDialogAction
                             onClick={async () => {
+                                if (!user?.primaryEmailAddress?.emailAddress) return;
                                 try {
                                     const res = await fetch(
-                                        '${process.env.NEXT_PUBLIC_API_URL}/verify-otp',
+                                        `${process.env.NEXT_PUBLIC_API_URL}/verify-otp`,
                                         {
                                             method: 'POST',
                                             headers: {

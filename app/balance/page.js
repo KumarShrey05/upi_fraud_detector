@@ -62,6 +62,7 @@ export default function BalancePage() {
           socket.emit('join', data.upiId);
 
           socket.on('balanceUpdated', async () => {
+            if (!data.upiId) return;
             const latest = await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/user/${data.upiId}`
             );

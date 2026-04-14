@@ -145,7 +145,7 @@ export default function HomePage() {
           localStorage.getItem(
             'upiId'
           );
-
+        if (!upiId) return;
         await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`,
           {
@@ -196,9 +196,9 @@ export default function HomePage() {
           <div className="fixed top-20 right-0 z-50 toast-edge-slide">
             <div
               className={`w-80 rounded-l-xl border-l border-t border-b shadow-2xl px-4 py-3 ${toast.type ===
-                  'error'
-                  ? 'bg-red-600/95 border-red-500 text-white'
-                  : 'bg-green-600/95 border-green-500 text-white'
+                'error'
+                ? 'bg-red-600/95 border-red-500 text-white'
+                : 'bg-green-600/95 border-green-500 text-white'
                 }`}
             >
               <p className="text-sm font-semibold">

@@ -30,11 +30,16 @@ export function FrequentContacts() {
 
           const txnRes =
             await fetch(
-              `http://localhost:5000/transactions/${senderUpi}`
+              `${process.env.NEXT_PUBLIC_API_URL}/transactions/${senderUpi}`
             );
 
-          const transactions =
+          const txnData =
             await txnRes.json();
+
+          const transactions =
+            Array.isArray(txnData)
+              ? txnData
+              : [];
 
           const successfulPayees =
             [
@@ -62,7 +67,7 @@ export function FrequentContacts() {
               ) => {
                 const userRes =
                   await fetch(
-                    `http://localhost:5000/user/${upiId}`
+                    `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`
                   );
 
                 const userData =

@@ -33,7 +33,10 @@ export default function TransactionsPage() {
   const [showMobileDateModal, setShowMobileDateModal] = useState(false);
 
   const getCurrentUpi = () =>
-    user ? `${user.primaryEmailAddress.emailAddress.split('@')[0]}@upi` : '';
+    typeof window !== 'undefined'
+      ? localStorage.getItem('upiId') || ''
+      : '';
+  user ? `${user.primaryEmailAddress.emailAddress.split('@')[0]}@upi` : '';
 
   /* SOCKET (UNCHANGED) */
   useEffect(() => {
@@ -43,7 +46,8 @@ export default function TransactionsPage() {
 
     const fetchTransactions = async () => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`);
-      setTransactions(await res.json());
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
     };
 
     socket.emit('join', upiId);

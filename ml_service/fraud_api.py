@@ -3,18 +3,20 @@ import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from flask_cors import CORS
 import os
 import json
 
 app = Flask(__name__)
+CORS(app)
 
 # -------------------------
 # Load trained model
 # -------------------------
-model = joblib.load("fraud_model.pkl")
+model = joblib.load("outputs/fraud_model.pkl")
 
 # Load model accuracy from JSON
-with open("model_info.json", "r") as f:
+with open("outputs/model_info.json", "r") as f:
     model_info = json.load(f)
 model_accuracy = model_info.get("accuracy", 0)
 
@@ -23,10 +25,18 @@ log_file = "transaction_logs.csv"
 
 # Ensure log file exists with headers
 if not os.path.exists(log_file):
-    df = pd.DataFrame(columns=[
-        "timestamp", "amount", "sender_balance", "balance_ratio", "is_new_receiver",
-        "risk", "risk_score", "model_accuracy"
-    ])
+    df = pd.DataFrame(
+        columns=[
+            "timestamp",
+            "amount",
+            "sender_balance",
+            "balance_ratio",
+            "is_new_receiver",
+            "risk",
+            "risk_score",
+            "model_accuracy",
+        ]
+    )
     df.to_csv(log_file, index=False)
 
 
@@ -59,7 +69,7 @@ def predict():
     proba = model.predict_proba(features)[0]
 
     # Risk score calculation
-    risk_score = int((proba[1]*0.5 + proba[2]) * 100)
+    risk_score = int((proba[1] * 0.5 + proba[2]) * 100)
     risk_score = int(risk_score * (0.5 + balance_ratio))
     risk_score = min(risk_score, 100)
 
@@ -74,16 +84,20 @@ def predict():
     # -------------------------
     # Append transaction log
     # -------------------------
-    log_entry = pd.DataFrame([{
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "amount": amount,
-        "sender_balance": sender_balance,
-        "balance_ratio": round(balance_ratio, 2),
-        "is_new_receiver": is_new_receiver,
-        "risk": risk,
-        "risk_score": risk_score,
-        "model_accuracy": round(model_accuracy, 2)
-    }])
+    log_entry = pd.DataFrame(
+        [
+            {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "amount": amount,
+                "sender_balance": sender_balance,
+                "balance_ratio": round(balance_ratio, 2),
+                "is_new_receiver": is_new_receiver,
+                "risk": risk,
+                "risk_score": risk_score,
+                "model_accuracy": round(model_accuracy, 2),
+            }
+        ]
+    )
 
     # Append to CSV, newest on top
     if os.path.exists(log_file):
@@ -101,4 +115,5 @@ def predict():
 # Run Flask API
 # -------------------------
 if __name__ == "__main__":
-    app.run(port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)

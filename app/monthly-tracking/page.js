@@ -28,20 +28,38 @@ export default function MonthlyTrackingPage() {
   const [transactions, setTransactions] = useState([]);
   const [duration, setDuration] = useState('3');
 
-  const currentUpi = user
-    ? `${user.primaryEmailAddress.emailAddress.split('@')[0]}@upi`
-    : '';
+  const [currentUpi, setCurrentUpi] = useState('');
 
   useEffect(() => {
     if (!user) return;
 
     const fetchTransactions = async () => {
       try {
+        const email = user?.primaryEmailAddress?.emailAddress;
+
+        if (!email) {
+          setTransactions([]);
+          return;
+        }
+
+        const profileRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`
+        );
+
+        const profileData = await profileRes.json();
+        const upiId = profileData?.upiId;
+
+        if (!upiId) {
+          setTransactions([]);
+          return;
+        }
+
+        setCurrentUpi(upiId);
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/transactions/${currentUpi}`
+          `${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`
         );
         const data = await res.json();
-        setTransactions(data);
+        setTransactions(Array.isArray(data) ? data : []);
       } catch (err) {
         console.log(err);
       }

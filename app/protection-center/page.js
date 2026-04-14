@@ -25,7 +25,10 @@ export default function FraudListPage() {
   useEffect(() => {
     const fetchInsights = async () => {
       try {
-        if (!user?.primaryEmailAddress?.emailAddress) return;
+        if (!user?.primaryEmailAddress?.emailAddress) {
+          setLoading(false);
+          return;
+        }
 
         const email =
           user.primaryEmailAddress.emailAddress;

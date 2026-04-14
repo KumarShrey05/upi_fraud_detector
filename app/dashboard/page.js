@@ -108,6 +108,12 @@ export default function DashboardPage() {
             user
               .primaryEmailAddress
               ?.emailAddress;
+          if (!email) {
+            setBalance(0);
+            setTransactions([]);
+            setChartData([]);
+            return;
+          }
 
           const profileRes =
             await fetch(
@@ -158,8 +164,13 @@ export default function DashboardPage() {
               `${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`
             );
 
-          const txnData =
+          const txnDataRaw =
             await txnRes.json();
+
+          const txnData =
+            Array.isArray(txnDataRaw)
+              ? txnDataRaw
+              : [];
 
           const insightRes =
             await fetch(
@@ -423,8 +434,8 @@ export default function DashboardPage() {
                 title="Account Verified"
                 description="Your account has passed all security checks"
                 metric={`✅ ${user
-                    ? '100'
-                    : '0'
+                  ? '100'
+                  : '0'
                   }% Verified`}
               />
 
@@ -457,8 +468,8 @@ function MetricCard({
 
       <p
         className={`text-3xl font-bold mt-2 ${green
-            ? 'text-green-500'
-            : ''
+          ? 'text-green-500'
+          : ''
           }`}
       >
         {value}

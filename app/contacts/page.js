@@ -29,6 +29,11 @@ export default function ContactsPage() {
         const email =
           user.primaryEmailAddress?.emailAddress;
 
+        if (!email) {
+          setContacts([]);
+          return;
+        }
+
         const profileRes = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`
         );
@@ -71,6 +76,7 @@ export default function ContactsPage() {
               let name = '';
 
               try {
+                if (!upiId) return null;
                 const userRes = await fetch(
                   `${process.env.NEXT_PUBLIC_API_URL}/user/${encodeURIComponent(upiId)}`
                 );
@@ -91,7 +97,7 @@ export default function ContactsPage() {
             })
         );
 
-        setContacts(sorted);
+        setContacts(sorted.filter(Boolean));
       } catch (error) {
         console.log(error);
       }
