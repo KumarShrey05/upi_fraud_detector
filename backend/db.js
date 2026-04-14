@@ -27,4 +27,6 @@ export const connectDB = async () => {
   }
 };
 
-export default () => db;
+const getDb = () => db;
+
+export default getDb;
