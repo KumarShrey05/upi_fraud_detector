@@ -2,4 +2,3 @@ upi_id,phone,qr_id,reason
 fraud1@upi,9876543210,QR123,scam
 fraud2@upi,9998887776,QR555,phishing
 badactor@upi,9123456780,QR777,fraud
-sanyuktasinha124@upi,9632547893,QR967,fraud
