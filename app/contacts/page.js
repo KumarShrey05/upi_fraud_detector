@@ -198,14 +198,14 @@ export default function ContactsPage() {
                       className="w-full flex items-center justify-between rounded-2xl border bg-card p-4 shadow-sm hover:bg-muted transition cursor-pointer"
                     >
                       <div className="text-left">
-<div>
-  <p className="font-semibold text-base">
-    {c.name || c.upiId}
-  </p>
-  <p className="text-sm text-muted-foreground">
-    {c.upiId}
-  </p>
-</div>
+                        <div>
+                          <p className="font-semibold text-base">
+                            {c.name || c.upiId}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {c.upiId}
+                          </p>
+                        </div>
 
 
                         <p className="text-sm text-muted-foreground mt-1">

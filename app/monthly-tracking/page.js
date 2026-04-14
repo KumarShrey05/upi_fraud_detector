@@ -127,12 +127,12 @@ export default function MonthlyTrackingPage() {
   const avgTxn =
     filteredTransactions.length > 0
       ? Math.round(
-          filteredTransactions.reduce(
-            (sum, txn) =>
-              sum + Number(txn.amount),
-            0
-          ) / filteredTransactions.length
-        )
+        filteredTransactions.reduce(
+          (sum, txn) =>
+            sum + Number(txn.amount),
+          0
+        ) / filteredTransactions.length
+      )
       : 0;
 
   const highestSent =
@@ -154,12 +154,12 @@ export default function MonthlyTrackingPage() {
   ];
 
   const maxMetricValue = Math.max(
-  avgTxn,
-  highestSent,
-  blockedCount,
-  otpCount,
-  1
-);
+    avgTxn,
+    highestSent,
+    blockedCount,
+    otpCount,
+    1
+  );
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -250,41 +250,41 @@ export default function MonthlyTrackingPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-<MetricCard
-  label="Avg Txn"
-  value={`₹${avgTxn}`}
-  progress={Math.max(
-    Math.min((avgTxn / 5000) * 100, 100),
-    20
-  )}
-/>
+              <MetricCard
+                label="Avg Txn"
+                value={`₹${avgTxn}`}
+                progress={Math.max(
+                  Math.min((avgTxn / 5000) * 100, 100),
+                  20
+                )}
+              />
 
-<MetricCard
-  label="Highest Sent"
-  value={`₹${highestSent}`}
-  progress={Math.max(
-    Math.min((highestSent / 15000) * 100, 100),
-    25
-  )}
-/>
+              <MetricCard
+                label="Highest Sent"
+                value={`₹${highestSent}`}
+                progress={Math.max(
+                  Math.min((highestSent / 15000) * 100, 100),
+                  25
+                )}
+              />
 
-<MetricCard
-  label="Blocked"
-  value={blockedCount}
-  progress={Math.max(
-    Math.min((blockedCount / 30) * 100, 100),
-    15
-  )}
-/>
+              <MetricCard
+                label="Blocked"
+                value={blockedCount}
+                progress={Math.max(
+                  Math.min((blockedCount / 30) * 100, 100),
+                  15
+                )}
+              />
 
-<MetricCard
-  label="OTP Verified"
-  value={otpCount}
-  progress={Math.max(
-    Math.min((otpCount / 30) * 100, 100),
-    15
-  )}
-/>
+              <MetricCard
+                label="OTP Verified"
+                value={otpCount}
+                progress={Math.max(
+                  Math.min((otpCount / 30) * 100, 100),
+                  15
+                )}
+              />
             </div>
 
             {/* Unique bottom tiles */}

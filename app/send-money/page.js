@@ -79,45 +79,45 @@ export default function SendMoneyPage() {
   }, []);
 
 
-const syncReceiverFields = async (value, type) => {
-  if (!value?.trim()) {
-    setUpiId('');
-    setReceiverName('');
-    return;
-  }
-
-  try {
-    let res, data;
-
-    if (type === 'upi') {
-      res = await fetch(
-        `http://localhost:5000/user/${encodeURIComponent(value)}`
-      );
-
-      if (!res.ok) return;
-
-      data = await res.json();
-
-      if (data?.name) {
-        setReceiverName(data.name);
-      }
-    } else {
-      res = await fetch(
-        `http://localhost:5000/user/search/${encodeURIComponent(value)}`
-      );
-
-      if (!res.ok) return;
-
-      data = await res.json();
-
-      if (data?.upiId) {
-        setUpiId(data.upiId);
-      }
+  const syncReceiverFields = async (value, type) => {
+    if (!value?.trim()) {
+      setUpiId('');
+      setReceiverName('');
+      return;
     }
-  } catch (err) {
-    console.log(err);
-  }
-};
+
+    try {
+      let res, data;
+
+      if (type === 'upi') {
+        res = await fetch(
+          `http://localhost:5000/user/${encodeURIComponent(value)}`
+        );
+
+        if (!res.ok) return;
+
+        data = await res.json();
+
+        if (data?.name) {
+          setReceiverName(data.name);
+        }
+      } else {
+        res = await fetch(
+          `http://localhost:5000/user/search/${encodeURIComponent(value)}`
+        );
+
+        if (!res.ok) return;
+
+        data = await res.json();
+
+        if (data?.upiId) {
+          setUpiId(data.upiId);
+        }
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const showToastMessage = (
     message,
@@ -154,7 +154,7 @@ const syncReceiverFields = async (value, type) => {
 
     new Audio(file)
       .play()
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const saveRecentUpi = (upi) => {
@@ -270,22 +270,22 @@ const syncReceiverFields = async (value, type) => {
     calculateRisk(upiId, value);
   };
 
-const handleUpiChange = async (e) => {
-  const value = e.target.value;
-  setUpiId(value);
+  const handleUpiChange = async (e) => {
+    const value = e.target.value;
+    setUpiId(value);
 
-  await syncReceiverFields(value, 'upi');
+    await syncReceiverFields(value, 'upi');
 
-  updateSuggestions(value);
-  calculateRisk(value, amount);
-};
+    updateSuggestions(value);
+    calculateRisk(value, amount);
+  };
 
-const handleNameChange = async (e) => {
-  const value = e.target.value;
-  setReceiverName(value);
+  const handleNameChange = async (e) => {
+    const value = e.target.value;
+    setReceiverName(value);
 
-  await syncReceiverFields(value, 'name');
-};
+    await syncReceiverFields(value, 'name');
+  };
 
 
   const resetForm = () => {
@@ -342,7 +342,7 @@ const handleNameChange = async (e) => {
         ) {
           setRiskScore(
             data.riskScore ||
-              0
+            0
           );
           setGeneratedOtp(
             data.otp
@@ -369,8 +369,8 @@ const handleNameChange = async (e) => {
         } else {
           showToastMessage(
             data.reason ||
-              data.message ||
-              'Transaction failed',
+            data.message ||
+            'Transaction failed',
             'error'
           );
 
@@ -454,24 +454,24 @@ const handleNameChange = async (e) => {
                     }
                     className="rounded-lg"
                   />
-{showSuggestions && suggestions.length > 0 && (
-  <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden">
-    {suggestions.map((item, index) => (
-      <button
-        key={index}
-        type="button"
-        onClick={() => {
-          setUpiId(item);
-          syncReceiverFields(item, 'upi');
-          setShowSuggestions(false);
-        }}
-        className="w-full text-left px-4 py-3 hover:bg-muted cursor-pointer transition"
-      >
-        {item}
-      </button>
-    ))}
-  </div>
-)}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-xl shadow-lg z-20 overflow-hidden">
+                      {suggestions.map((item, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setUpiId(item);
+                            syncReceiverFields(item, 'upi');
+                            setShowSuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-muted cursor-pointer transition"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Amount */}
@@ -520,97 +520,96 @@ const handleNameChange = async (e) => {
           </div>
         </main>
       </div>
-{toast.show && (
-  <div
-    className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white ${
-      toast.type === 'success'
-        ? 'bg-green-600'
-        : 'bg-red-600'
-    } ${toastClosing ? 'toast-out' : 'toast-edge-slide'}`}
-  >
-    {toast.message}
-  </div>
-)}
+      {toast.show && (
+        <div
+          className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white ${toast.type === 'success'
+              ? 'bg-green-600'
+              : 'bg-red-600'
+            } ${toastClosing ? 'toast-out' : 'toast-edge-slide'}`}
+        >
+          {toast.message}
+        </div>
+      )}
 
-<AlertDialog open={showOTP}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>
-        OTP Verification Required
-      </AlertDialogTitle>
-      <AlertDialogDescription>
-        High risk transaction detected.
-        Please verify OTP to continue.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
+      <AlertDialog open={showOTP}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              OTP Verification Required
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              High risk transaction detected.
+              Please verify OTP to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-<div className="space-y-4">
-  <Input
-    type="text"
-    placeholder="Enter OTP sent to your email"
-    value={otp}
-    onChange={(e) => setOtp(e.target.value)}
-    className="rounded-lg"
-  />
-</div>
+          <div className="space-y-4">
+            <Input
+              type="text"
+              placeholder="Enter OTP sent to your email"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="rounded-lg"
+            />
+          </div>
 
 
-    <div className="flex gap-2 mt-4">
-      <AlertDialogCancel
-        onClick={() => {
-          setShowOTP(false);
-          setOtp('');
-        }}
-      >
-        Cancel
-      </AlertDialogCancel>
+          <div className="flex gap-2 mt-4">
+            <AlertDialogCancel
+              onClick={() => {
+                setShowOTP(false);
+                setOtp('');
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
 
-      <AlertDialogAction
-        onClick={async () => {
-          try {
-            const res = await fetch(
-              'http://localhost:5000/verify-otp',
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                
-body: JSON.stringify({
-  sender:
-    user.primaryEmailAddress.emailAddress.split('@')[0] + '@upi',
-  receiver: upiId,
-  amount: Number(amount),
-  note,
-  otp,
-  email: user.primaryEmailAddress.emailAddress,
-}),
-              }
-            );
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  const res = await fetch(
+                    'http://localhost:5000/verify-otp',
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
 
-            const data = await res.json();
+                      body: JSON.stringify({
+                        sender:
+                          user.primaryEmailAddress.emailAddress.split('@')[0] + '@upi',
+                        receiver: upiId,
+                        amount: Number(amount),
+                        note,
+                        otp,
+                        email: user.primaryEmailAddress.emailAddress,
+                      }),
+                    }
+                  );
 
-            if (data.status === 'success') {
-              showToastMessage('Money sent successfully!');
-              playSound('success');
-              resetForm();
-            } else {
-              showToastMessage('Invalid OTP', 'error');
-              playSound('error');
-            }
+                  const data = await res.json();
 
-            setShowOTP(false);
-            setOtp('');
-          } catch {
-            showToastMessage('OTP verification failed', 'error');
-          }
-        }}
-      >
-        Verify
-      </AlertDialogAction>
-    </div>
-  </AlertDialogContent>
-</AlertDialog>
+                  if (data.status === 'success') {
+                    showToastMessage('Money sent successfully!');
+                    playSound('success');
+                    resetForm();
+                  } else {
+                    showToastMessage('Invalid OTP', 'error');
+                    playSound('error');
+                  }
+
+                  setShowOTP(false);
+                  setOtp('');
+                } catch {
+                  showToastMessage('OTP verification failed', 'error');
+                }
+              }}
+            >
+              Verify
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>

@@ -161,14 +161,14 @@ export default function SettingsPage() {
                     handleDarkModeToggle
                   }
                   className={`cursor-pointer relative w-12 h-6 rounded-full transition-colors ${darkMode
-                      ? 'bg-blue-600'
-                      : 'bg-gray-300'
+                    ? 'bg-blue-600'
+                    : 'bg-gray-300'
                     }`}
                 >
                   <div
                     className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${darkMode
-                        ? 'translate-x-6'
-                        : ''
+                      ? 'translate-x-6'
+                      : ''
                       }`}
                   />
                 </button>
@@ -300,15 +300,15 @@ export default function SettingsPage() {
       {toast.show && (
         <div
           className={`fixed top-20 right-0 z-50 ${toastClosing
-              ? 'toast-out'
-              : 'toast-edge-slide'
+            ? 'toast-out'
+            : 'toast-edge-slide'
             }`}
         >
           <div
             className={`w-80 border-l border-t border-b shadow-2xl px-4 py-3 ${toast.type ===
-                'error'
-                ? 'bg-red-600/95 border-red-500 text-white'
-                : 'bg-green-600/95 border-green-500 text-white'
+              'error'
+              ? 'bg-red-600/95 border-red-500 text-white'
+              : 'bg-green-600/95 border-green-500 text-white'
               }`}
           >
             <p className="text-sm font-semibold">

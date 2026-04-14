@@ -124,9 +124,8 @@ export function HeroCarousel() {
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              index === currentSlide ? 'bg-black w-8' : 'bg-gray-300 w-2'
-            }`}
+            className={`h-2 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-black w-8' : 'bg-gray-300 w-2'
+              }`}
           />
         ))}
       </div>

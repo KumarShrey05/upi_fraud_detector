@@ -195,12 +195,11 @@ export default function HomePage() {
         {toast.show && (
           <div className="fixed top-20 right-0 z-50 toast-edge-slide">
             <div
-              className={`w-80 rounded-l-xl border-l border-t border-b shadow-2xl px-4 py-3 ${
-                toast.type ===
-                'error'
+              className={`w-80 rounded-l-xl border-l border-t border-b shadow-2xl px-4 py-3 ${toast.type ===
+                  'error'
                   ? 'bg-red-600/95 border-red-500 text-white'
                   : 'bg-green-600/95 border-green-500 text-white'
-              }`}
+                }`}
             >
               <p className="text-sm font-semibold">
                 {toast.message}

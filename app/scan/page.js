@@ -35,12 +35,12 @@ export default function ScanQRPage() {
         await scannerRef.current.stop();
         await scannerRef.current.clear();
       }
-    } catch {}
+    } catch { }
   };
 
   const onScanSuccess = async (decodedText) => {
     setScannedData(parseQR(decodedText));
-    new Audio("/beep.mp3").play().catch(() => {});
+    new Audio("/beep.mp3").play().catch(() => { });
     await stopCamera();
     setCameraStarted(false);
   };
@@ -60,7 +60,7 @@ export default function ScanQRPage() {
         cameras[0].id,
         { fps: 10, qrbox: { width: 220, height: 220 } },
         onScanSuccess,
-        () => {}
+        () => { }
       );
 
       setLoading(false);
@@ -100,8 +100,8 @@ export default function ScanQRPage() {
           <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
             <div className="flex items-center gap-4">
               <Link href="/">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="w-5 h-5" />
+                <Button variant="ghost" size="icon" className="cursor-pointer">
+                  <ArrowLeft className="w-5 h-5 " />
                 </Button>
               </Link>
               <h1 className="text-2xl font-bold">Scan QR Code</h1>
@@ -112,11 +112,10 @@ export default function ScanQRPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => setScanMode("camera")}
-                    className={`p-4 rounded-2xl border-2 ${
-                      scanMode === "camera"
+                    className={`p-4 rounded-2xl border-2 cursor-pointer ${scanMode === "camera"
                         ? "border-primary bg-primary/10"
                         : "border-border"
-                    }`}
+                      }`}
                   >
                     <Camera className="w-8 h-8 mx-auto mb-2 text-primary" />
                     <p>Camera Scan</p>
@@ -124,11 +123,10 @@ export default function ScanQRPage() {
 
                   <button
                     onClick={() => setScanMode("upload")}
-                    className={`p-4 rounded-2xl border-2 ${
-                      scanMode === "upload"
+                    className={`p-4 rounded-2xl border-2 cursor-pointer ${scanMode === "upload"
                         ? "border-primary bg-primary/10"
                         : "border-border"
-                    }`}
+                      }`}
                   >
                     <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
                     <p>Upload Image</p>
@@ -147,7 +145,7 @@ export default function ScanQRPage() {
                           Point your camera at a UPI QR code
                         </p>
 
-                        <Button onClick={startCamera} className="w-full">
+                        <Button onClick={startCamera} className="w-full cursor-pointer">
                           Start Camera
                         </Button>
                       </>
@@ -231,8 +229,8 @@ export default function ScanQRPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
+                <div className="grid grid-cols-2 gap-3 ">
+                  <Button className="cursor-pointer"
                     variant="outline"
                     onClick={() => setScannedData(null)}
                   >
@@ -244,7 +242,7 @@ export default function ScanQRPage() {
                       scannedData.upiId
                     )}&name=${encodeURIComponent(scannedData.name)}`}
                   >
-                    <Button className="w-full">
+                    <Button className="w-full cursor-pointer">
                       Proceed to Pay
                     </Button>
                   </Link>

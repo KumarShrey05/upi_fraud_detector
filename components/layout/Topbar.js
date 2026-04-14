@@ -1,6 +1,7 @@
 'use client';
 
 import { Bell, Menu, X, CreditCard } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
@@ -13,9 +14,9 @@ export function Topbar(props = {}) {
   const displayName =
     isLoaded && user
       ? user.fullName ||
-        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-        user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
-        'User'
+      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+      user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+      'User'
       : 'User';
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -162,11 +163,10 @@ export function Topbar(props = {}) {
       {toast.show && (
         <div className="fixed top-20 right-0 z-[9999] toast-edge-slide">
           <div
-            className={`w-80 rounded-l-xl border-l border-t border-b shadow-2xl px-4 py-3 ${
-              toast.type === 'error'
-                ? 'bg-red-600/95 border-red-500 text-white'
-                : 'bg-green-600/95 border-green-500 text-white'
-            }`}
+            className={`w-80 rounded-l-xl border-l border-t border-b shadow-2xl px-4 py-3 ${toast.type === 'error'
+              ? 'bg-red-600/95 border-red-500 text-white'
+              : 'bg-green-600/95 border-green-500 text-white'
+              }`}
           >
             <p className="text-sm font-semibold">
               {toast.message}
@@ -176,7 +176,7 @@ export function Topbar(props = {}) {
       )}
 
       <header className="sticky top-0 z-40 bg-card border-b border-border shadow-sm">
-        <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+        <div className="flex items-center justify-between h-17 px-4 sm:px-6">
 
           {/* LEFT */}
           <div className="flex items-center gap-3">
@@ -188,17 +188,32 @@ export function Topbar(props = {}) {
             </button>
 
             {/* MOBILE BRAND */}
+
             <Link
               href="/"
-              className="flex items-center gap-2 md:hidden"
+              className="md:hidden flex items-center border-0 outline-none shadow-none"
             >
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-white" />
+              <div className="block dark:hidden">
+                <Image
+                  src="/full-logo.svg"
+                  alt="UPay"
+                  width={120}
+                  height={40}
+                  priority
+                  className="border-0 shadow-none outline-none"
+                />
               </div>
 
-              <span className="font-bold text-base">
-                UPay
-              </span>
+              <div className="hidden dark:block">
+                <Image
+                  src="/full-logo-dark-mode.png"
+                  alt="UPay"
+                  width={120}
+                  height={40}
+                  priority
+                  className="border-0 shadow-none outline-none"
+                />
+              </div>
             </Link>
 
             {/* DESKTOP WELCOME */}

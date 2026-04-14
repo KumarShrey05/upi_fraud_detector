@@ -45,11 +45,10 @@ export default function ThemeToggle() {
       </button>
 
       <div
-        className={`absolute right-0 mt-2 w-44 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-lg transition-all duration-200 origin-top-right ${
-          open
+        className={`absolute right-0 mt-2 w-44 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-lg transition-all duration-200 origin-top-right ${open
             ? "scale-100 opacity-100"
             : "scale-95 opacity-0 pointer-events-none"
-        }`}
+          }`}
       >
         <Option
           label="Light"

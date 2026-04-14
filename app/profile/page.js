@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
 import {
   Mail,
@@ -147,42 +148,74 @@ export default function ProfilePage() {
 
     const canvas = document.createElement('canvas');
     const size = 600;
-    const margin = 60;
+    const margin = 80;
+    const headerHeight = 90;
+    const footerHeight = 80;
 
     canvas.width = size + margin * 2;
-    canvas.height = size + margin * 2;
+    canvas.height = 760;
 
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const img = new Image();
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 28px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      user.name || '',
+      canvas.width / 2,
+      35
+    );
+
+    const img = new window.Image();
+    const logo = new window.Image();
 
     return new Promise((resolve) => {
       img.onload = () => {
+        const qrY = 70;
+
         ctx.drawImage(
           img,
           margin,
-          margin,
+          qrY,
           size,
           size
         );
 
-        canvas.toBlob(
-          (blob) => resolve(blob),
-          'image/png',
-          1.0
-        );
+        logo.onload = () => {
+          const logoSize = 90;
+
+          ctx.drawImage(
+            logo,
+            canvas.width / 2 - logoSize / 2,
+            qrY + size / 2 - logoSize / 2,
+            logoSize,
+            logoSize
+          );
+
+          ctx.fillStyle = '#4b5563';
+          ctx.font = '20px monospace';
+          ctx.fillText(
+            user.upiId || '',
+            canvas.width / 2,
+            695
+          );
+
+          canvas.toBlob(
+            (blob) => resolve(blob),
+            'image/png',
+            1.0
+          );
+        };
+
+        logo.src = '/half logo.svg';
       };
 
       img.src =
-        'data:image/svg+xml;base64,' +
-        btoa(
-          unescape(
-            encodeURIComponent(svgData)
-          )
-        );
+        'data:image/svg+xml;charset=utf-8,' +
+        encodeURIComponent(svgData);
     });
   };
 
@@ -384,12 +417,32 @@ UPI ID:- ${user.upiId}`;
                 ref={qrRef}
                 className="bg-muted dark:bg-slate-800/70 rounded-xl p-6 flex items-center justify-center min-h-[220px]"
               >
+
                 {user?.upiId ? (
-                  <div className="bg-white p-4 rounded-lg shadow-md">
-                    <QRCode
-                      value={qrValue}
-                      size={180}
-                    />
+                  <div className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center">
+                    <p className="text-xs font-semibold text-slate-700 mb-2">
+                      {user.name}
+                    </p>
+
+                    <div className="relative">
+                      <QRCode
+                        value={qrValue}
+                        size={180}
+                        level="H"
+                      />
+
+                      <Image
+                        src="/half logo.svg"
+                        alt="UPay Logo"
+                        width={35}
+                        height={35}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                      />
+                    </div>
+
+                    <p className="text-[11px] font-mono text-slate-600 mt-2">
+                      {user.upiId}
+                    </p>
                   </div>
                 ) : null}
               </div>

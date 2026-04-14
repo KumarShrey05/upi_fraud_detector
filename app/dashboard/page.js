@@ -253,23 +253,22 @@ export default function DashboardPage() {
                           'short',
                       }
                     ) +
-                    `-${
-                      index +
-                      1
+                    `-${index +
+                    1
                     }`,
                   sent:
                     txn.sender ===
-                    upiId
+                      upiId
                       ? Number(
-                          txn.amount
-                        )
+                        txn.amount
+                      )
                       : 0,
                   received:
                     txn.receiver ===
-                    upiId
+                      upiId
                       ? Number(
-                          txn.amount
-                        )
+                        txn.amount
+                      )
                       : 0,
                 })
               );
@@ -423,11 +422,10 @@ export default function DashboardPage() {
                 type="success"
                 title="Account Verified"
                 description="Your account has passed all security checks"
-                metric={`✅ ${
-                  user
+                metric={`✅ ${user
                     ? '100'
                     : '0'
-                }% Verified`}
+                  }% Verified`}
               />
 
               <InsightCard
@@ -458,11 +456,10 @@ function MetricCard({
       </p>
 
       <p
-        className={`text-3xl font-bold mt-2 ${
-          green
+        className={`text-3xl font-bold mt-2 ${green
             ? 'text-green-500'
             : ''
-        }`}
+          }`}
       >
         {value}
       </p>

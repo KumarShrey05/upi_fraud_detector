@@ -43,9 +43,9 @@ export function FrequentContacts() {
                   .filter(
                     (txn) =>
                       txn.sender ===
-                        senderUpi &&
+                      senderUpi &&
                       txn.status ===
-                        'success'
+                      'success'
                   )
                   .map(
                     (txn) =>
@@ -105,8 +105,8 @@ export function FrequentContacts() {
                       'from-orange-500 to-orange-600',
                       'from-indigo-500 to-indigo-600',
                     ][
-                      index %
-                        6
+                    index %
+                    6
                     ],
                 };
               }
@@ -131,17 +131,17 @@ export function FrequentContacts() {
     fetchContacts();
   }, [user, isLoaded]);
 
-const handleContactClick = (
-  contact
-) => {
-  router.push(
-    `/send-money?receiver=${encodeURIComponent(
-      contact.upiId
-    )}&name=${encodeURIComponent(
-      contact.name
-    )}`
-  );
-};
+  const handleContactClick = (
+    contact
+  ) => {
+    router.push(
+      `/send-money?receiver=${encodeURIComponent(
+        contact.upiId
+      )}&name=${encodeURIComponent(
+        contact.name
+      )}`
+    );
+  };
 
 
   return (
@@ -163,7 +163,7 @@ const handleContactClick = (
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
         {contacts.length ===
-        0 ? (
+          0 ? (
           <p className="text-sm text-muted-foreground col-span-full">
             No recent
             contacts

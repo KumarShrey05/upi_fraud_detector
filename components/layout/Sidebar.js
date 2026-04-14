@@ -1,18 +1,7 @@
 'use client';
 
-import {
-  CreditCard,
-  Home,
-  Send,
-  History,
-  LogOut,
-  LogIn,
-  X,
-  AlertTriangle,
-  Calendar,
-  User,
-  Settings,
-} from 'lucide-react';
+import { CreditCard, Home, Send, History, LogOut, LogIn, X, AlertTriangle, Calendar, User, Settings, } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -62,19 +51,31 @@ export function Sidebar({ isOpen = false, onClose }) {
           'md:sticky md:translate-x-0'
         )}
       >
-        <div className="flex items-center justify-between h-16 px-6 border-b border-border">
+        <div className="flex items-center justify-between h-17 px-6 border-b border-border">
           <Link
             href="/"
             onClick={onClose}
-            className="flex items-center gap-3 cursor-pointer"
+            className="cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-white" />
+            <div className="block dark:hidden">
+              <Image
+                src="/full-logo.svg"
+                alt="UPay"
+                width={140}
+                height={40}
+                priority
+              />
             </div>
 
-            <h2 className="text-lg font-bold text-foreground transition-transform duration-300 hover:scale-110">
-              UPay
-            </h2>
+            <div className="hidden dark:block">
+              <Image
+                src="/full-logo-dark-mode.png"
+                alt="UPay"
+                width={140}
+                height={44}
+                priority
+              />
+            </div>
           </Link>
 
           <button
