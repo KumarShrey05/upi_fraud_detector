@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import db from "./db.js";
+import getDb, { connectDB } from "./db.js";
 import { Server } from "socket.io";
 import http from "http";
 import fs from "fs";
@@ -11,6 +11,9 @@ import { Resend } from "resend";
 
 
 dotenv.config();
+
+await connectDB();
+const db = getDb();
 
 // ML Prediction function
 async function checkML({
@@ -692,7 +695,7 @@ app.get('/fraud-insights/:upiId', async (req, res) => {
   }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
 
