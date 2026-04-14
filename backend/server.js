@@ -24,11 +24,14 @@ async function checkML({
   is_new_receiver,
 }) {
   try {
-    const res = await axios.post("http://localhost:8000/predict", {
-      amount: amount,
-      sender_balance: sender_balance,
-      is_new_receiver: is_new_receiver,
-    });
+    const res = await axios.post(
+      `${process.env.ML_API_URL}/predict`,
+      {
+        amount: amount,
+        sender_balance: sender_balance,
+        is_new_receiver: is_new_receiver,
+      }
+    );
 
     const risk = res.data.risk;
     const score = res.data.score;
