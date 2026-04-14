@@ -99,9 +99,7 @@ app.post("/register", async (req, res) => {
 
     // create new user
     await db.query(
-      `INSERT INTO users 
-   (id, name, email, phone, location, upiId, balance, created_at) 
-   VALUES (NULL, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO users (id, name, email, phone, location, upiId, balance, created_at) VALUES (NULL, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         name,
         email,
@@ -150,7 +148,7 @@ app.post("/send-money", async (req, res) => {
     // =========================
     if (fraudUpis.includes(receiver.toLowerCase().trim())) {
       await db.query(
-        "INSERT INTO transactions (sender, receiver, amount, time, status, reason) VALUES (?, ?, ?, NOW(), ?, ?)",
+        "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (NULL, ?, ?, ?, ?, NOW(), ?, ?)",
         [sender, receiver, amt, "blocked", "Receiver is suspicious"],
       );
 
