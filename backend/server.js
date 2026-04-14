@@ -300,9 +300,24 @@ app.post("/send-money", async (req, res) => {
       receiver,
     ]);
 
+    const [lastTxn] = await db.query(
+      "SELECT MAX(id) as maxId FROM transactions"
+    );
+
+    const nextTxnId =
+      (lastTxn[0]?.maxId || 0) + 1;
+
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, NOW(), ?, ?)",
-      [sender, receiver, amt, note || null, "success", "ML: Low risk transaction",]
+      "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+      [
+        nextTxnId,
+        sender,
+        receiver,
+        amt,
+        note || null,
+        "success",
+        "ML: Low risk transaction",
+      ]
     );
 
     io.to(sender).emit("balanceUpdated");
@@ -602,47 +617,55 @@ app.post("/verify-otp", async (req, res) => {
     // SAVE TRANSACTION (UPDATED)
     // =========================
 
-    await db.query(
-      const [lastTxn] = await db.query(
+    const [lastTxn] = await db.query(
       "SELECT MAX(id) as maxId FROM transactions"
     );
 
     const nextTxnId =
       (lastTxn[0]?.maxId || 0) + 1;
 
-    "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
-      [nextTxnId, data.sender, data.receiver, data.amount, data.note || null, "success", "High amount - OTP verified",]
+    await db.query(
+      "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+      [
+        nextTxnId,
+        data.sender,
+        data.receiver,
+        data.amount,
+        data.note || null,
+        "success",
+        "High amount - OTP verified",
+      ]
     );
 
-io.to(data.sender).emit("balanceUpdated");
-io.to(data.receiver).emit("balanceUpdated");
-io.to(data.receiver).emit("paymentReceived", {
-  sender: data.sender,
-  amount: data.amount,
-});
+    io.to(data.sender).emit("balanceUpdated");
+    io.to(data.receiver).emit("balanceUpdated");
+    io.to(data.receiver).emit("paymentReceived", {
+      sender: data.sender,
+      amount: data.amount,
+    });
 
-// =========================
-// CLEANUP
-// =========================
+    // =========================
+    // CLEANUP
+    // =========================
 
-delete otpStore[sender];
+    delete otpStore[sender];
 
-// =========================
-// RESPONSE
-// =========================
+    // =========================
+    // RESPONSE
+    // =========================
 
-return res.json({
-  status: "success",
-  message: "Transaction successful",
-});
+    return res.json({
+      status: "success",
+      message: "Transaction successful",
+    });
   } catch (err) {
-  console.log("OTP Transaction Error:", err);
+    console.log("OTP Transaction Error:", err);
 
-  return res.status(500).json({
-    status: "failed",
-    message: "Server error",
-  });
-}
+    return res.status(500).json({
+      status: "failed",
+      message: "Server error",
+    });
+  }
 });
 
 // Fraud insights API
