@@ -30,7 +30,7 @@ export default function ContactsPage() {
           user.primaryEmailAddress?.emailAddress;
 
         const profileRes = await fetch(
-          `http://localhost:5000/user/email/${encodeURIComponent(email)}`
+          `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`
         );
 
         const profileData =
@@ -45,7 +45,7 @@ export default function ContactsPage() {
         }
 
         const res = await fetch(
-          `http://localhost:5000/transactions/${upiId}`
+          `${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`
         );
 
         const data = await res.json();
@@ -72,7 +72,7 @@ export default function ContactsPage() {
 
               try {
                 const userRes = await fetch(
-                  `http://localhost:5000/user/${encodeURIComponent(upiId)}`
+                  `${process.env.NEXT_PUBLIC_API_URL}/user/${encodeURIComponent(upiId)}`
                 );
 
                 if (userRes.ok) {

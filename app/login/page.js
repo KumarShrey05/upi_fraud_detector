@@ -1,38 +1,20 @@
 'use client';
 
 import { useEffect } from 'react';
-import {
-  SignIn,
-  useUser,
-} from '@clerk/nextjs';
+import { SignIn, useUser, } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import {
-  ShieldCheck,
-  Lock,
-  Zap,
-} from 'lucide-react';
+import { ShieldCheck, Lock, Zap, } from 'lucide-react';
 
 export default function Login() {
-  const {
-    isLoaded,
-    isSignedIn,
-    user,
-  } = useUser();
+  const { isLoaded, isSignedIn, user, } = useUser();
 
   const router = useRouter();
 
   useEffect(() => {
-    if (
-      isLoaded &&
-      isSignedIn
-    ) {
+    if ( isLoaded && isSignedIn) {
       router.replace('/dashboard');
     }
-  }, [
-    isLoaded,
-    isSignedIn,
-    router,
-  ]);
+  }, [ isLoaded, isSignedIn, router, ]);
 
   if (!isLoaded) {
     return null;

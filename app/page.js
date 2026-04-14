@@ -58,7 +58,7 @@ export default function HomePage() {
 
       try {
         const res = await fetch(
-          'http://localhost:5000/register',
+          `${process.env.NEXT_PUBLIC_API_URL}/register`,
           {
             method: 'POST',
             headers: {
@@ -114,7 +114,7 @@ export default function HomePage() {
   // =========================
   useEffect(() => {
     const socket = io(
-      'http://localhost:5000'
+      `${process.env.NEXT_PUBLIC_API_URL}`
     );
 
     const upiId =
@@ -147,7 +147,7 @@ export default function HomePage() {
           );
 
         await fetch(
-          `http://localhost:5000/user/${upiId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`,
           {
             method: 'PUT',
             headers: {

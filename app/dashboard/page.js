@@ -111,7 +111,7 @@ export default function DashboardPage() {
 
           const profileRes =
             await fetch(
-              `http://localhost:5000/user/email/${encodeURIComponent(
+              `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(
                 email
               )}`
             );
@@ -137,7 +137,7 @@ export default function DashboardPage() {
           }
 
           socket = io(
-            'http://localhost:5000'
+            process.env.NEXT_PUBLIC_API_URL
           );
 
           socket.emit(
@@ -147,7 +147,7 @@ export default function DashboardPage() {
 
           const userRes =
             await fetch(
-              `http://localhost:5000/user/${upiId}`
+              `${process.env.NEXT_PUBLIC_API_URL}/user/${upiId}`
             );
 
           const userData =
@@ -155,7 +155,7 @@ export default function DashboardPage() {
 
           const txnRes =
             await fetch(
-              `http://localhost:5000/transactions/${upiId}`
+              `${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`
             );
 
           const txnData =
@@ -163,7 +163,7 @@ export default function DashboardPage() {
 
           const insightRes =
             await fetch(
-              `http://localhost:5000/fraud-insights/${upiId}`
+              `${process.env.NEXT_PUBLIC_API_URL}/fraud-insights/${upiId}`
             );
 
           const insightData =

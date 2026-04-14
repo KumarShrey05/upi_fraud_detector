@@ -83,7 +83,7 @@ export default function SendMoneyContent() {
 
             if (type === 'upi') {
                 res = await fetch(
-                    `http://localhost:5000/user/${encodeURIComponent(value)}`
+                    `${process.env.NEXT_PUBLIC_API_URL}/user/${encodeURIComponent(value)}`
                 );
 
                 if (!res.ok) return;
@@ -95,7 +95,7 @@ export default function SendMoneyContent() {
                 }
             } else {
                 res = await fetch(
-                    `http://localhost:5000/user/search/${encodeURIComponent(value)}`
+                    `${process.env.NEXT_PUBLIC_API_URL}/user/search/${encodeURIComponent(value)}`
                 );
 
                 if (!res.ok) return;
@@ -304,7 +304,7 @@ export default function SendMoneyContent() {
             try {
                 const res =
                     await fetch(
-                        'http://localhost:5000/send-money',
+                        `${process.env.NEXT_PUBLIC_API_URL}/send-money`,
                         {
                             method: 'POST',
                             headers: {
@@ -560,7 +560,7 @@ export default function SendMoneyContent() {
                             onClick={async () => {
                                 try {
                                     const res = await fetch(
-                                        'http://localhost:5000/verify-otp',
+                                        '${process.env.NEXT_PUBLIC_API_URL}/verify-otp',
                                         {
                                             method: 'POST',
                                             headers: {

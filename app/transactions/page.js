@@ -38,11 +38,11 @@ export default function TransactionsPage() {
   /* SOCKET (UNCHANGED) */
   useEffect(() => {
     if (!user) return;
-    const socket = io('http://localhost:5000');
+    const socket = io(`${process.env.NEXT_PUBLIC_API_URL}`);
     const upiId = getCurrentUpi();
 
     const fetchTransactions = async () => {
-      const res = await fetch(`http://localhost:5000/transactions/${upiId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/transactions/${upiId}`);
       setTransactions(await res.json());
     };
 

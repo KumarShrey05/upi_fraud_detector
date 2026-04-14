@@ -31,7 +31,7 @@ export default function FraudListPage() {
           user.primaryEmailAddress.emailAddress;
 
         const userRes = await fetch(
-          `http://localhost:5000/user/email/${email}`
+          `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`
         );
 
         const userData = await userRes.json();
@@ -42,7 +42,7 @@ export default function FraudListPage() {
         }
 
         const res = await fetch(
-          `http://localhost:5000/fraud-insights/${userData.upiId}`
+          `${process.env.NEXT_PUBLIC_API_URL}/fraud-insights/${userData.upiId}`
         );
 
         const data = await res.json();

@@ -53,7 +53,7 @@ export default function ProfilePage() {
           clerkUser.primaryEmailAddress?.emailAddress;
 
         const userRes = await fetch(
-          `http://localhost:5000/user/email/${encodeURIComponent(email)}`
+          `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`
         );
 
         const userData = await userRes.json();
@@ -70,7 +70,7 @@ export default function ProfilePage() {
         );
 
         const res = await fetch(
-          `http://localhost:5000/api/user/profile/${encodeURIComponent(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/user/profile/${encodeURIComponent(
             userData.upiId
           )}`
         );
@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
     try {
       await fetch(
-        `http://localhost:5000/user/${encodeURIComponent(user.upiId)}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/user/${encodeURIComponent(user.upiId)}`,
         {
           method: 'PUT',
           headers: {

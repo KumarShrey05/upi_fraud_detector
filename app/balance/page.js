@@ -50,7 +50,7 @@ export default function BalancePage() {
         const email = user.primaryEmailAddress.emailAddress;
 
         const res = await fetch(
-          `http://localhost:5000/user/email/${encodeURIComponent(email)}`
+          `${process.env.NEXT_PUBLIC_API_URL}/user/email/${encodeURIComponent(email)}`
         );
 
         const data = await res.json();
@@ -58,12 +58,12 @@ export default function BalancePage() {
         setBalance(Number(data.balance) || 0);
 
         if (data.upiId) {
-          socket = io('http://localhost:5000');
+          socket = io(process.env.NEXT_PUBLIC_API_URL);
           socket.emit('join', data.upiId);
 
           socket.on('balanceUpdated', async () => {
             const latest = await fetch(
-              `http://localhost:5000/user/${data.upiId}`
+              `${process.env.NEXT_PUBLIC_API_URL}/user/${data.upiId}`
             );
 
             const latestData = await latest.json();
