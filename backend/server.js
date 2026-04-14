@@ -603,39 +603,46 @@ app.post("/verify-otp", async (req, res) => {
     // =========================
 
     await db.query(
-      "INSERT INTO transactions (sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, NOW(), ?, ?)",
-      [data.sender, data.receiver, data.amount, data.note || null, "success", "High amount - OTP verified",]
+      const [lastTxn] = await db.query(
+      "SELECT MAX(id) as maxId FROM transactions"
     );
 
-    io.to(data.sender).emit("balanceUpdated");
-    io.to(data.receiver).emit("balanceUpdated");
-    io.to(data.receiver).emit("paymentReceived", {
-      sender: data.sender,
-      amount: data.amount,
-    });
+    const nextTxnId =
+      (lastTxn[0]?.maxId || 0) + 1;
 
-    // =========================
-    // CLEANUP
-    // =========================
+    "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+      [nextTxnId, data.sender, data.receiver, data.amount, data.note || null, "success", "High amount - OTP verified",]
+    );
 
-    delete otpStore[sender];
+io.to(data.sender).emit("balanceUpdated");
+io.to(data.receiver).emit("balanceUpdated");
+io.to(data.receiver).emit("paymentReceived", {
+  sender: data.sender,
+  amount: data.amount,
+});
 
-    // =========================
-    // RESPONSE
-    // =========================
+// =========================
+// CLEANUP
+// =========================
 
-    return res.json({
-      status: "success",
-      message: "Transaction successful",
-    });
+delete otpStore[sender];
+
+// =========================
+// RESPONSE
+// =========================
+
+return res.json({
+  status: "success",
+  message: "Transaction successful",
+});
   } catch (err) {
-    console.log("OTP Transaction Error:", err);
+  console.log("OTP Transaction Error:", err);
 
-    return res.status(500).json({
-      status: "failed",
-      message: "Server error",
-    });
-  }
+  return res.status(500).json({
+    status: "failed",
+    message: "Server error",
+  });
+}
 });
 
 // Fraud insights API
