@@ -247,7 +247,7 @@ export default function SettingsPage() {
                 <p>Version: 1.0.0</p>
                 <p>Release: Stable</p>
                 <p>Security Engine: Active</p>
-                <p>Developed by Kumar Shrey</p>
+                <p>© 2026 UPay • Built by Kumar Shrey</p>
               </div>
             </Card>
 
