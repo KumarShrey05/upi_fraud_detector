@@ -3,11 +3,14 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-if (!process.env.MYSQL_PUBLIC_URL) {
-  throw new Error("MYSQL_PUBLIC_URL is missing in .env");
-}
-
-const db = await mysql.createConnection(process.env.MYSQL_PUBLIC_URL);
+const db = await mysql.createConnection({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  connectTimeout: 60000,
+});
 
 console.log("MySQL Connected");
 
