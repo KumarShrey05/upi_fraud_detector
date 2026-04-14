@@ -153,19 +153,33 @@ app.post("/send-money", async (req, res) => {
     // =========================
     // CSV FRAUD CHECK
     // =========================
-    if (fraudUpis.includes(receiver.toLowerCase().trim())) {
-      await db.query(
-        "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (NULL, ?, ?, ?, ?, NOW(), ?, ?)",
-        [sender, receiver, amt, "blocked", "Receiver is suspicious"],
-      );
+if (fraudUpis.includes(receiver.toLowerCase().trim())) {
+  const [lastTxn] = await db.query(
+    "SELECT MAX(id) as maxId FROM transactions"
+  );
 
-      return res.json({
-        status: "blocked",
-        message: "Transaction blocked",
-        reason: "Receiver is suspicious",
-      });
-    }
+  const nextTxnId =
+    (lastTxn[0]?.maxId || 0) + 1;
 
+  await db.query(
+    "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+    [
+      nextTxnId,
+      sender,
+      receiver,
+      amt,
+      note || null,
+      "blocked",
+      "Receiver is suspicious",
+    ]
+  );
+
+  return res.json({
+    status: "blocked",
+    message: "Transaction blocked",
+    reason: "Receiver is suspicious",
+  });
+}
     // =========================
     // FETCH USERS
     // =========================
