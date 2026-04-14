@@ -46,7 +46,7 @@ export function Sidebar({ isOpen = false, onClose }) {
 
       <aside
         className={cn(
-          'fixed top-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col h-screen transition-transform duration-300',
+          'fixed top-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col h-[calc(100vh-64px)] md:h-screen transition-transform duration-300',
           isOpen ? 'translate-x-0' : '-translate-x-full',
           'md:sticky md:translate-x-0'
         )}
@@ -86,7 +86,7 @@ export function Sidebar({ isOpen = false, onClose }) {
           </button>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-8">
+        <nav className="flex-1 px-4 py-4 md:py-6 space-y-6 md:space-y-8 overflow-y-auto">
           <div className="space-y-2">
             {mainLinks.map((link) => {
               const Icon = link.icon;
@@ -98,7 +98,7 @@ export function Sidebar({ isOpen = false, onClose }) {
                   href={link.href}
                   onClick={onClose}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg font-medium',
+                    'flex items-center gap-3 px-4 py-2 md:py-3 rounded-lg font-medium',
                     isActive
                       ? 'bg-primary text-primary-foreground'
                       : 'text-foreground hover:bg-muted'
@@ -143,7 +143,7 @@ export function Sidebar({ isOpen = false, onClose }) {
         <div className="border-t border-border p-4 bg-card">
           <button
             onClick={handleAuthAction}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-2 md:py-3 rounded-lg hover:bg-muted cursor-pointer"
           >
             {isSignedIn ? (
               <>
