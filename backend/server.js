@@ -100,8 +100,8 @@ app.post("/register", async (req, res) => {
     // create new user
     await db.query(
       `INSERT INTO users 
-   (name, email, phone, location, upiId, balance, created_at) 
-   VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+   (id, name, email, phone, location, upiId, balance, created_at) 
+   VALUES (NULL, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         name,
         email,
