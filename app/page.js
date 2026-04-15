@@ -55,6 +55,14 @@ export default function HomePage() {
   };
 
   // =========================
+  // WAKE BACKEND + ML SERVICE
+  // =========================
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`)
+      .catch(() => { });
+  }, []);
+
+  // =========================
   // REGISTER USER
   // =========================
   useEffect(() => {

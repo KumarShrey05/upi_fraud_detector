@@ -74,6 +74,22 @@ app.get("/", (req, res) => {
   res.send("UPI Fraud Detection Backend Running");
 });
 
+// Health route to wake backend + ML service
+app.get("/health", async (req, res) => {
+  try {
+    await axios.get(`${process.env.ML_API_URL}/`);
+    return res.json({
+      backend: "awake",
+      ml: "awake",
+    });
+  } catch {
+    return res.json({
+      backend: "awake",
+      ml: "sleeping_or_waking",
+    });
+  }
+});
+
 // Register User API
 const generateUpiId = (email) => {
   const name = email.split("@")[0];
