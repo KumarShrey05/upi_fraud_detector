@@ -58,39 +58,37 @@ export default function HomePage() {
   };
 
   // =========================
-  // SMART SPLASH LOADER
+  // SPLASH LOADER + WAKE BACKEND + ML SERVICE
   // =========================
   useEffect(() => {
+    const minimumSplashTime = 3000;
+    const startTime = Date.now();
+
     const wakeServices = async () => {
       try {
-        const res = await fetch(
+        await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/health`
         );
-
-        const data = await res.json();
-
-        if (
-          data.backend === "awake" &&
-          (data.ml === "awake" ||
-            data.ml === "sleeping_or_waking")
-        ) {
-          setShowSplash(false);
-        }
       } catch (error) {
         console.error("Wake failed:", error);
-        setShowSplash(false);
+      } finally {
+        const elapsed =
+          Date.now() - startTime;
+
+        const remaining =
+          minimumSplashTime - elapsed;
+
+        if (remaining > 0) {
+          setTimeout(() => {
+            setShowSplash(false);
+          }, remaining);
+        } else {
+          setShowSplash(false);
+        }
       }
     };
 
     wakeServices();
-  }, []);
-
-  // =========================
-  // WAKE BACKEND + ML SERVICE
-  // =========================
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`)
-      .catch(() => { });
   }, []);
 
   // =========================
@@ -236,41 +234,54 @@ export default function HomePage() {
 
   if (showSplash) {
     return (
-      <div className="min-h-screen flex flex-col justify-between bg-slate-950 overflow-hidden relative">
+      <div className="min-h-screen relative overflow-hidden bg-[#020617] flex flex-col items-center justify-center">
 
-        {/* TOP DESIGN */}
-        <div className="h-40 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 animate-pulse" />
+        {/* base cinematic background */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#0f172a_0%,_#020617_55%,_#000000_100%)]" />
 
-        {/* CENTER */}
-        <div className="flex flex-col items-center justify-center flex-1 px-6 relative">
+        {/* top light streaks */}
+        <div className="absolute top-0 left-0 w-full h-48">
+          <div className="absolute top-6 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-orange-400 to-transparent blur-sm opacity-80 animate-pulse" />
+          <div className="absolute top-14 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-sm opacity-80 animate-pulse" />
+          <div className="absolute top-20 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-pink-400 to-transparent blur-sm opacity-70 animate-pulse" />
+        </div>
 
-          {/* glow background */}
-          <div className="absolute w-72 h-72 rounded-full bg-blue-900/20 blur-3xl animate-pulse" />
+        {/* bottom light streaks */}
+        <div className="absolute bottom-0 left-0 w-full h-48">
+          <div className="absolute bottom-20 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-orange-400 to-transparent blur-sm opacity-80 animate-pulse" />
+          <div className="absolute bottom-12 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-sm opacity-80 animate-pulse" />
+          <div className="absolute bottom-6 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-pink-400 to-transparent blur-sm opacity-70 animate-pulse" />
+        </div>
 
+        {/* center glow */}
+        <div className="absolute w-80 h-80 rounded-full bg-blue-500/20 blur-3xl animate-pulse" />
+
+        {/* spotlight glow below logo */}
+        <div className="absolute top-[48%] w-64 h-10 rounded-full bg-cyan-300/30 blur-2xl" />
+
+        {/* content */}
+        <div className="relative z-10 flex flex-col items-center">
           <Image
-            src="/logo.png"
+            src="/half-logo.png"
             alt="UPay"
-            width={240}
-            height={240}
+            width={260}
+            height={260}
             priority
-            className="object-contain drop-shadow-2xl animate-bounce relative z-10"
+            className="object-contain drop-shadow-2xl"
           />
 
-          <h1 className="mt-6 text-4xl font-bold text-white tracking-wide relative z-10">
+          <h1 className="mt-6 text-5xl font-bold text-white tracking-wide">
             UPay
           </h1>
 
-          <p className="mt-3 text-base text-slate-300 text-center relative z-10">
+          <p className="mt-4 text-xl text-white/90">
             Secure UPI Transactions
           </p>
 
-          <p className="mt-2 text-sm text-blue-300 text-center relative z-10 font-medium">
+          <p className="mt-4 text-base text-slate-400">
             Built by Kumar Shrey
           </p>
         </div>
-
-        {/* BOTTOM DESIGN */}
-        <div className="h-40 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 animate-pulse" />
       </div>
     );
   }
