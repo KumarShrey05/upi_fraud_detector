@@ -72,7 +72,7 @@ export default function Login() {
         {/* Right */}
         <div className="p-8 flex items-center justify-center">
           <SignIn
-            routing="hash"
+            routing="path"
             appearance={{
               elements: {
                 card: 'shadow-none border-none',

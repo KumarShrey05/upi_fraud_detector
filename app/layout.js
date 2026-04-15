@@ -16,6 +16,12 @@ export const metadata = {
   title: 'Upay',
   description:
     'Upay is a UPI fraud detection dashboard built with Next.js, Tailwind CSS, and Clerk for authentication. It provides real-time insights into your transactions, helping you identify and prevent fraudulent activities.',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-32x32.png',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/site.webmanifest',
 };
 
 export const viewport = {
