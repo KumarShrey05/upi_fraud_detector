@@ -234,30 +234,35 @@ export default function HomePage() {
 
   if (showSplash) {
     return (
-      <div className="min-h-screen relative overflow-hidden bg-[#020617] flex flex-col items-center justify-center">
+      <div className="relative min-h-screen w-full overflow-hidden bg-[#02040a] flex flex-col items-center justify-center">
 
         {/* base cinematic background */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#0f172a_0%,_#020617_55%,_#000000_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#102a5c_0%,_#020617_45%,_#000000_100%)]" />
 
-        {/* top light streaks */}
-        <div className="absolute top-0 left-0 w-full h-48">
-          <div className="absolute top-6 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-orange-400 to-transparent blur-sm opacity-80 animate-pulse" />
-          <div className="absolute top-14 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-sm opacity-80 animate-pulse" />
-          <div className="absolute top-20 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-pink-400 to-transparent blur-sm opacity-70 animate-pulse" />
+        {/* Top Neon Curves */}
+        <div className="absolute top-[-2%] w-[130%] h-[180px] opacity-90">
+          <div className="absolute top-6 w-full h-[2px] bg-gradient-to-r from-transparent via-orange-400 to-transparent blur-[1px] shadow-[0_0_20px_rgba(251,146,60,0.7)]" />
+          <div className="absolute top-14 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-[1px] shadow-[0_0_20px_rgba(96,165,250,0.8)]" />
+          <div className="absolute top-22 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-400 to-transparent blur-[1px] shadow-[0_0_20px_rgba(192,132,252,0.8)]" />
         </div>
 
-        {/* bottom light streaks */}
-        <div className="absolute bottom-0 left-0 w-full h-48">
-          <div className="absolute bottom-20 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-orange-400 to-transparent blur-sm opacity-80 animate-pulse" />
-          <div className="absolute bottom-12 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-sm opacity-80 animate-pulse" />
-          <div className="absolute bottom-6 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-pink-400 to-transparent blur-sm opacity-70 animate-pulse" />
+        {/* Center Beam + Spotlight */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute w-[140%] h-[140px] bg-blue-500/10 blur-[100px]" />
+          <div className="absolute w-[80%] h-[20px] bg-cyan-400/20 blur-[40px]" />
+          <div className="absolute top-[58%] w-72 h-12 rounded-full bg-cyan-300/30 blur-[30px]" />
+          <div className="absolute w-40 h-40 bg-blue-300/25 rounded-full blur-[80px]" />
         </div>
 
-        {/* center glow */}
-        <div className="absolute w-80 h-80 rounded-full bg-blue-500/20 blur-3xl animate-pulse" />
+        {/* Bottom Neon Curves */}
+        <div className="absolute bottom-[-2%] w-[130%] h-[180px] opacity-90">
+          <div className="absolute bottom-22 w-full h-[2px] bg-gradient-to-r from-transparent via-orange-400 to-transparent blur-[1px] shadow-[0_0_20px_rgba(251,146,60,0.7)]" />
+          <div className="absolute bottom-14 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-[1px] shadow-[0_0_20px_rgba(96,165,250,0.8)]" />
+          <div className="absolute bottom-6 w-full h-[2px] bg-gradient-to-r from-transparent via-purple-400 to-transparent blur-[1px] shadow-[0_0_20px_rgba(192,132,252,0.8)]" />
+        </div>
 
-        {/* spotlight glow below logo */}
-        <div className="absolute top-[48%] w-64 h-10 rounded-full bg-cyan-300/30 blur-2xl" />
+        {/* grain texture */}
+        <div className="absolute inset-0 opacity-[0.025] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
         {/* content */}
         <div className="relative z-10 flex flex-col items-center">
