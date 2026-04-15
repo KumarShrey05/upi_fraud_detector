@@ -259,55 +259,33 @@ app.post("/send-money", async (req, res) => {
       mlResult.status === "medium_risk" ||
       mlResult.status === "high_risk"
     ) {
-      // =========================
-      // OTP GENERATION
-      // =========================
       const otp = Math.floor(100000 + Math.random() * 900000);
 
       console.log("Generated OTP:", otp);
-      console.log("Sending OTP to email:", email);
+      console.log("Sending OTP to:", email);
 
-      // =========================
-      // SEND OTP EMAIL
-      // =========================
-      try {
-        const mailResponse = await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL,
-          to: email,
-          subject: "OTP Verification • Upay",
-          html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
-          <h2 style="margin-bottom: 10px;">OTP Verification</h2>
+      const mailResponse = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: email,
+        subject: "OTP Verification • Upay",
+        html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+        <h2>OTP Verification</h2>
+        <p>Your transaction of <strong>₹${amt}</strong> requires verification.</p>
 
-          <p>Your transaction of <strong>₹${amt}</strong> requires verification.</p>
-
-          <p>Please use the OTP below:</p>
-
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
-            ${otp}
-          </div>
-
-          <p style="color: #666; font-size: 14px;">
-            This OTP is valid for 5 minutes. Do not share it with anyone.
-          </p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
+          ${otp}
         </div>
-      `,
-        });
 
-        console.log("OTP mail response:", mailResponse);
-      } catch (mailErr) {
-        console.error("OTP mail failed:", mailErr);
+        <p style="color: #666; font-size: 14px;">
+          This OTP is valid for 5 minutes.
+        </p>
+      </div>
+    `,
+      });
 
-        return res.status(500).json({
-          status: "failed",
-          message: "OTP email failed",
-          error: mailErr.message,
-        });
-      }
+      console.log("OTP mail response:", mailResponse);
 
-      // =========================
-      // STORE OTP
-      // =========================
       otpStore[sender] = {
         otp,
         sender,
@@ -317,33 +295,12 @@ app.post("/send-money", async (req, res) => {
         time: Date.now(),
       };
 
-      console.log("OTP stored successfully");
-
       return res.json({
         status: "otp_required",
         message: "OTP required (Hybrid Risk)",
         riskScore: finalRiskScore,
       });
     }
-
-    otpStore[sender] = {
-      otp,
-      sender,
-      receiver,
-      amount: amt,
-      note: note || null,
-      time: Date.now(),
-    };
-
-    console.log("OTP generated:", otp);
-
-    return res.json({
-      status: "otp_required",
-      message: "OTP required (Hybrid Risk)",
-      otp,
-      riskScore: finalRiskScore,
-    });
-  }
 
     // =========================
     // NORMAL TRANSACTION (LOW RISK)
