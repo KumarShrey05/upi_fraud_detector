@@ -179,10 +179,16 @@ export default function ScanQRPage() {
                         </Button>
                       </>
                     ) : (
-                      <div className="w-[340px] h-[250px] mx-auto rounded-2xl overflow-hidden">
-                        <div id="reader" className="w-full h-full"></div>
+                      <div className="w-full max-w-[340px] aspect-[4/3] mx-auto rounded-2xl overflow-hidden border">
+                        <div
+                          id="reader"
+                          className="w-full h-full flex items-center justify-center"
+                        ></div>
+
                         {loading && (
-                          <p className="mt-3 text-sm">Opening camera...</p>
+                          <p className="mt-3 text-sm text-center">
+                            Opening camera...
+                          </p>
                         )}
                       </div>
                     )}
