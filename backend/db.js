@@ -17,9 +17,11 @@ export const connectDB = async () => {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       connectTimeout: 60000,
+      timezone: '+05:30',
     });
 
-    console.log("MySQL Connected");
+    await db.query("SET time_zone = '+05:30'");
+    console.log("Timezone set to IST");
     return db;
   } catch (error) {
     console.error("DB Connection Error:", error.message);

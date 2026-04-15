@@ -113,14 +113,14 @@ app.post("/register", async (req, res) => {
         phone || null,
         location || null,
         upiId,
-        10000,
+        100000,
       ]
     );
 
     res.json({
       message: "User created",
       upiId,
-      balance: 10000,
+      balance: 100000,
     });
     console.log("User inserted successfully");
   } catch (err) {
@@ -307,57 +307,57 @@ app.post("/send-money", async (req, res) => {
     // =========================
 
     await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
-    amt,
-    sender,
-  ]);
-
-  await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
-    amt,
-    receiver,
-  ]);
-
-  const [lastTxn] = await db.query(
-    "SELECT MAX(id) as maxId FROM transactions"
-  );
-
-  const nextTxnId =
-    (lastTxn[0]?.maxId || 0) + 1;
-
-  await db.query(
-    "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
-    [
-      nextTxnId,
-      sender,
-      receiver,
       amt,
-      note || null,
-      "success",
-      "ML: Low risk transaction",
-    ]
-  );
+      sender,
+    ]);
 
-  io.to(sender).emit("balanceUpdated");
-  io.to(receiver).emit("balanceUpdated");
-  io.to(receiver).emit("paymentReceived", {
-    sender,
-    amount: amt,
-  });
+    await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
+      amt,
+      receiver,
+    ]);
 
-  return res.json({
-    status: "success",
-    message: "Transaction successful",
-  });
-} catch (error) {
-  console.error(
-    'SEND MONEY ERROR:',
-    error
-  );
+    const [lastTxn] = await db.query(
+      "SELECT MAX(id) as maxId FROM transactions"
+    );
 
-  return res.status(500).json({
-    message: 'Server error',
-    error: error.message
-  });
-}
+    const nextTxnId =
+      (lastTxn[0]?.maxId || 0) + 1;
+
+    await db.query(
+      "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+      [
+        nextTxnId,
+        sender,
+        receiver,
+        amt,
+        note || null,
+        "success",
+        "ML: Low risk transaction",
+      ]
+    );
+
+    io.to(sender).emit("balanceUpdated");
+    io.to(receiver).emit("balanceUpdated");
+    io.to(receiver).emit("paymentReceived", {
+      sender,
+      amount: amt,
+    });
+
+    return res.json({
+      status: "success",
+      message: "Transaction successful",
+    });
+  } catch (error) {
+    console.error(
+      'SEND MONEY ERROR:',
+      error
+    );
+
+    return res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    });
+  }
 });
 
 // Fetch user profile
@@ -438,10 +438,14 @@ app.get("/dashboard-stats/:upiId", async (req, res) => {
       [upiId, upiId]
     );
 
-    const today = new Date().toDateString();
+    const today = new Date().toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+    });
 
     const todayTransactions = rows.filter(
-      (txn) => new Date(txn.time).toDateString() === today
+      new Date(txn.time).toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+      }) === today
     );
 
     const successful = rows.filter(
