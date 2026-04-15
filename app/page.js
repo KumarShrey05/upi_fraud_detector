@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { io } from 'socket.io-client';
-
+import Image from 'next/image';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { BottomNav } from '@/components/layout/Bottom-nav';
@@ -33,6 +33,9 @@ export default function HomePage() {
     type: 'success',
   });
 
+  const [showSplash, setShowSplash] =
+    useState(true);
+
   const { user, isLoaded } = useUser();
 
   const showToastMessage = (
@@ -53,6 +56,34 @@ export default function HomePage() {
       });
     }, 2500);
   };
+
+  // =========================
+  // SMART SPLASH LOADER
+  // =========================
+  useEffect(() => {
+    const wakeServices = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/health`
+        );
+
+        const data = await res.json();
+
+        if (
+          data.backend === "awake" &&
+          (data.ml === "awake" ||
+            data.ml === "sleeping_or_waking")
+        ) {
+          setShowSplash(false);
+        }
+      } catch (error) {
+        console.error("Wake failed:", error);
+        setShowSplash(false);
+      }
+    };
+
+    wakeServices();
+  }, []);
 
   // =========================
   // WAKE BACKEND + ML SERVICE
@@ -202,6 +233,47 @@ export default function HomePage() {
         setSavingProfile(false);
       }
     };
+
+  if (showSplash) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-slate-950 overflow-hidden relative">
+
+        {/* TOP DESIGN */}
+        <div className="h-40 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 animate-pulse" />
+
+        {/* CENTER */}
+        <div className="flex flex-col items-center justify-center flex-1 px-6 relative">
+
+          {/* glow background */}
+          <div className="absolute w-72 h-72 rounded-full bg-blue-900/20 blur-3xl animate-pulse" />
+
+          <Image
+            src="/logo.png"
+            alt="UPay"
+            width={240}
+            height={240}
+            priority
+            className="object-contain drop-shadow-2xl animate-bounce relative z-10"
+          />
+
+          <h1 className="mt-6 text-4xl font-bold text-white tracking-wide relative z-10">
+            UPay
+          </h1>
+
+          <p className="mt-3 text-base text-slate-300 text-center relative z-10">
+            Secure UPI Transactions
+          </p>
+
+          <p className="mt-2 text-sm text-blue-300 text-center relative z-10 font-medium">
+            Built by Kumar Shrey
+          </p>
+        </div>
+
+        {/* BOTTOM DESIGN */}
+        <div className="h-40 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background">
