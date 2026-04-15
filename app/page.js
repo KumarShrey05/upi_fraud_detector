@@ -61,6 +61,21 @@ export default function HomePage() {
   // SPLASH LOADER + WAKE BACKEND + ML SERVICE
   // =========================
   useEffect(() => {
+    const splashShown =
+      sessionStorage.getItem(
+        'upaySplashShown'
+      );
+
+    if (splashShown) {
+      setShowSplash(false);
+
+      fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/health`
+      ).catch(() => { });
+
+      return;
+    }
+
     const minimumSplashTime = 3000;
     const startTime = Date.now();
 
@@ -70,7 +85,10 @@ export default function HomePage() {
           `${process.env.NEXT_PUBLIC_API_URL}/health`
         );
       } catch (error) {
-        console.error("Wake failed:", error);
+        console.error(
+          'Wake failed:',
+          error
+        );
       } finally {
         const elapsed =
           Date.now() - startTime;
@@ -78,12 +96,22 @@ export default function HomePage() {
         const remaining =
           minimumSplashTime - elapsed;
 
-        if (remaining > 0) {
-          setTimeout(() => {
-            setShowSplash(false);
-          }, remaining);
-        } else {
+        const hideSplash = () => {
+          sessionStorage.setItem(
+            'upaySplashShown',
+            'true'
+          );
+
           setShowSplash(false);
+        };
+
+        if (remaining > 0) {
+          setTimeout(
+            hideSplash,
+            remaining
+          );
+        } else {
+          hideSplash();
         }
       }
     };
