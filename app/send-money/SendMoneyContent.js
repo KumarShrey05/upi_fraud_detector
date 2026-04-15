@@ -28,7 +28,7 @@ export default function SendMoneyContent() {
     const [isBlocked, setIsBlocked] = useState(false);
     const [toastClosing, setToastClosing] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    cconst[isSending, setIsSending] = useState(false);
+    const[isSending, setIsSending] = useState(false);
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const [toast, setToast] = useState({
