@@ -18,6 +18,10 @@ export const connectDB = async () => {
       database: process.env.DB_NAME,
       connectTimeout: 60000,
       timezone: '+05:30',
+      ssl: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true,
+      },
     });
 
     await db.query("SET time_zone = '+05:30'");
