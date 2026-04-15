@@ -153,33 +153,33 @@ app.post("/send-money", async (req, res) => {
     // =========================
     // CSV FRAUD CHECK
     // =========================
-if (fraudUpis.includes(receiver.toLowerCase().trim())) {
-  const [lastTxn] = await db.query(
-    "SELECT MAX(id) as maxId FROM transactions"
-  );
+    if (fraudUpis.includes(receiver.toLowerCase().trim())) {
+      const [lastTxn] = await db.query(
+        "SELECT MAX(id) as maxId FROM transactions"
+      );
 
-  const nextTxnId =
-    (lastTxn[0]?.maxId || 0) + 1;
+      const nextTxnId =
+        (lastTxn[0]?.maxId || 0) + 1;
 
-  await db.query(
-    "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
-    [
-      nextTxnId,
-      sender,
-      receiver,
-      amt,
-      note || null,
-      "blocked",
-      "Receiver is suspicious",
-    ]
-  );
+      await db.query(
+        "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+        [
+          nextTxnId,
+          sender,
+          receiver,
+          amt,
+          note || null,
+          "blocked",
+          "Receiver is suspicious",
+        ]
+      );
 
-  return res.json({
-    status: "blocked",
-    message: "Transaction blocked",
-    reason: "Receiver is suspicious",
-  });
-}
+      return res.json({
+        status: "blocked",
+        message: "Transaction blocked",
+        reason: "Receiver is suspicious",
+      });
+    }
     // =========================
     // FETCH USERS
     // =========================
@@ -258,29 +258,56 @@ if (fraudUpis.includes(receiver.toLowerCase().trim())) {
       amt > 0.5 * senderBalance ||
       mlResult.status === "medium_risk" ||
       mlResult.status === "high_risk"
-    ) {//OTP sent to mail id
+    ) {
+      // =========================
+      // OTP GENERATION
+      // =========================
       const otp = Math.floor(100000 + Math.random() * 900000);
-      await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: email,
-        subject: "OTP Verification • UPI Fraud Detector",
-        html: `
-    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
-      <h2 style="margin-bottom: 10px;">OTP Verification</h2>
-      <p>Your transaction of <strong>₹${amt}</strong> requires verification.</p>
-      <p>Please use the OTP below:</p>
 
-      <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
-        ${otp}
-      </div>
+      console.log("Generated OTP:", otp);
+      console.log("Sending OTP to email:", email);
 
-      <p style="color: #666; font-size: 14px;">
-        This OTP is valid for 5 minutes. Do not share it with anyone.
-      </p>
-    </div>
-  `,
-      });
+      // =========================
+      // SEND OTP EMAIL
+      // =========================
+      try {
+        const mailResponse = await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL,
+          to: email,
+          subject: "OTP Verification • Upay",
+          html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+          <h2 style="margin-bottom: 10px;">OTP Verification</h2>
 
+          <p>Your transaction of <strong>₹${amt}</strong> requires verification.</p>
+
+          <p>Please use the OTP below:</p>
+
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 20px 0;">
+            ${otp}
+          </div>
+
+          <p style="color: #666; font-size: 14px;">
+            This OTP is valid for 5 minutes. Do not share it with anyone.
+          </p>
+        </div>
+      `,
+        });
+
+        console.log("OTP mail response:", mailResponse);
+      } catch (mailErr) {
+        console.error("OTP mail failed:", mailErr);
+
+        return res.status(500).json({
+          status: "failed",
+          message: "OTP email failed",
+          error: mailErr.message,
+        });
+      }
+
+      // =========================
+      // STORE OTP
+      // =========================
       otpStore[sender] = {
         otp,
         sender,
@@ -290,72 +317,90 @@ if (fraudUpis.includes(receiver.toLowerCase().trim())) {
         time: Date.now(),
       };
 
-      console.log("OTP generated:", otp);
+      console.log("OTP stored successfully");
 
       return res.json({
         status: "otp_required",
         message: "OTP required (Hybrid Risk)",
-        otp,
         riskScore: finalRiskScore,
       });
     }
+
+    otpStore[sender] = {
+      otp,
+      sender,
+      receiver,
+      amount: amt,
+      note: note || null,
+      time: Date.now(),
+    };
+
+    console.log("OTP generated:", otp);
+
+    return res.json({
+      status: "otp_required",
+      message: "OTP required (Hybrid Risk)",
+      otp,
+      riskScore: finalRiskScore,
+    });
+  }
 
     // =========================
     // NORMAL TRANSACTION (LOW RISK)
     // =========================
 
     await db.query("UPDATE users SET balance = balance - ? WHERE upiId = ?", [
-      amt,
-      sender,
-    ]);
+    amt,
+    sender,
+  ]);
 
-    await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
-      amt,
+  await db.query("UPDATE users SET balance = balance + ? WHERE upiId = ?", [
+    amt,
+    receiver,
+  ]);
+
+  const [lastTxn] = await db.query(
+    "SELECT MAX(id) as maxId FROM transactions"
+  );
+
+  const nextTxnId =
+    (lastTxn[0]?.maxId || 0) + 1;
+
+  await db.query(
+    "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
+    [
+      nextTxnId,
+      sender,
       receiver,
-    ]);
+      amt,
+      note || null,
+      "success",
+      "ML: Low risk transaction",
+    ]
+  );
 
-    const [lastTxn] = await db.query(
-      "SELECT MAX(id) as maxId FROM transactions"
-    );
+  io.to(sender).emit("balanceUpdated");
+  io.to(receiver).emit("balanceUpdated");
+  io.to(receiver).emit("paymentReceived", {
+    sender,
+    amount: amt,
+  });
 
-    const nextTxnId =
-      (lastTxn[0]?.maxId || 0) + 1;
+  return res.json({
+    status: "success",
+    message: "Transaction successful",
+  });
+} catch (error) {
+  console.error(
+    'SEND MONEY ERROR:',
+    error
+  );
 
-    await db.query(
-      "INSERT INTO transactions (id, sender, receiver, amount, note, time, status, reason) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)",
-      [
-        nextTxnId,
-        sender,
-        receiver,
-        amt,
-        note || null,
-        "success",
-        "ML: Low risk transaction",
-      ]
-    );
-
-    io.to(sender).emit("balanceUpdated");
-    io.to(receiver).emit("balanceUpdated");
-    io.to(receiver).emit("paymentReceived", {
-      sender,
-      amount: amt,
-    });
-
-    return res.json({
-      status: "success",
-      message: "Transaction successful",
-    });
-  } catch (error) {
-    console.error(
-      'SEND MONEY ERROR:',
-      error
-    );
-
-    return res.status(500).json({
-      message: 'Server error',
-      error: error.message
-    });
-  }
+  return res.status(500).json({
+    message: 'Server error',
+    error: error.message
+  });
+}
 });
 
 // Fetch user profile
