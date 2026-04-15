@@ -28,7 +28,8 @@ export default function SendMoneyContent() {
     const [isBlocked, setIsBlocked] = useState(false);
     const [toastClosing, setToastClosing] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [suggestions, setSuggestions] = useState([]);
+    cconst[isSending, setIsSending] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const [toast, setToast] = useState({
         show: false,
@@ -299,118 +300,83 @@ export default function SendMoneyContent() {
         setShowSuggestions(false);
     };
 
-    const handleSendMoney =
-        async () => {
-            if (!user || isBlocked)
-                return;
-            if (
-                !upiId ||
-                !upiId.includes('@upi')
-            ) {
+    const handleSendMoney = async () => {
+        if (!user || isBlocked || isSending) return;
+
+        if (!upiId || !upiId.includes('@upi')) {
+            showToastMessage('Please enter valid UPI ID', 'error');
+            return;
+        }
+
+        if (!amount || Number(amount) <= 0) {
+            showToastMessage('Enter valid amount', 'error');
+            return;
+        }
+
+        setIsSending(true);
+
+        const sender =
+            user.primaryEmailAddress.emailAddress.split('@')[0] + '@upi';
+
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/send-money`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sender,
+                        receiver: upiId,
+                        amount: Number(amount),
+                        note,
+                        email: user.primaryEmailAddress.emailAddress,
+                    }),
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
                 showToastMessage(
-                    'Please enter valid UPI ID',
+                    data.error ||
+                    data.message ||
+                    'Transaction request failed',
                     'error'
                 );
                 return;
             }
 
-            if (!amount || Number(amount) <= 0) {
-                showToastMessage(
-                    'Enter valid amount',
-                    'error'
-                );
+            if (data.status === 'otp_required') {
+                setRiskScore(data.riskScore || 0);
+                setShowOTP(true);
+                setIsSending(false);   // IMPORTANT
                 return;
             }
 
-            const sender =
-                user.primaryEmailAddress.emailAddress.split(
-                    '@'
-                )[0] + '@upi';
-
-            try {
-                const res =
-                    await fetch(
-                        `${process.env.NEXT_PUBLIC_API_URL}/send-money`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type':
-                                    'application/json',
-                            },
-                            body: JSON.stringify({
-                                sender,
-                                receiver: upiId,
-                                amount:
-                                    Number(amount),
-                                note,
-                                email:
-                                    user
-                                        .primaryEmailAddress
-                                        .emailAddress,
-                            }),
-                        }
-                    );
-
-                if (!res.ok) {
-                    showToastMessage(
-                        data.error ||
-                        data.message ||
-                        'Transaction request failed',
-                        'error'
-                    );
-                    return;
-                }
-
-                const data =
-                    await res.json();
-
-                if (
-                    data.status ===
-                    'otp_required'
-                ) {
-                    setRiskScore(
-                        data.riskScore ||
-                        0
-                    );
-                    setGeneratedOtp(
-                        data.otp
-                    );
-                    setShowOTP(true);
-                    return;
-                }
-
-                if (
-                    data.status ===
-                    'success'
-                ) {
-                    saveRecentUpi(upiId);
-
-                    showToastMessage(
-                        'Money sent successfully!'
-                    );
-
-                    playSound(
-                        'success'
-                    );
-
-                    resetForm();
-                } else {
-                    showToastMessage(
-                        data.reason ||
-                        data.message ||
-                        'Transaction failed',
-                        'error'
-                    );
-
-                    playSound('error');
-                }
-            } catch {
+            if (data.status === 'success') {
+                saveRecentUpi(upiId);
+                showToastMessage('Money sent successfully!');
+                playSound('success');
+                resetForm();
+            } else {
                 showToastMessage(
-                    'Server error',
+                    data.reason ||
+                    data.message ||
+                    'Transaction failed',
                     'error'
                 );
+                playSound('error');
             }
-        };
+        } catch {
+            showToastMessage('Server error', 'error');
+        } finally {
+            if (!showOTP) {
+                setIsSending(false);
+            }
+        }
+    };
 
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-background">
@@ -537,12 +503,11 @@ export default function SendMoneyContent() {
                             </div>
 
                             <Button
-                                onClick={
-                                    handleSendMoney
-                                }
-                                className="w-full h-12 rounded-lg font-semibold cursor-pointer"
+                                onClick={handleSendMoney}
+                                disabled={isSending}
+                                className="w-full h-12 rounded-lg font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Send Money
+                                {isSending ? 'Sending...' : 'Send Money'}
                             </Button>
                         </div>
                     </div>
@@ -593,7 +558,10 @@ export default function SendMoneyContent() {
                         </AlertDialogCancel>
 
                         <AlertDialogAction
+                            disabled={isVerifyingOtp}
                             onClick={async () => {
+                                if (isVerifyingOtp) return;
+                                setIsVerifyingOtp(true);
                                 if (!user?.primaryEmailAddress?.emailAddress) return;
                                 try {
                                     const res = await fetch(
@@ -643,6 +611,8 @@ export default function SendMoneyContent() {
                                     setOtp('');
                                 } catch {
                                     showToastMessage('OTP verification failed', 'error');
+                                } finally {
+                                    setIsVerifyingOtp(false);
                                 }
                             }}
                         >
