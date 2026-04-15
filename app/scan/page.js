@@ -51,20 +51,49 @@ export default function ScanQRPage() {
       setCameraStarted(true);
 
       const cameras = await Html5Qrcode.getCameras();
-      if (!cameras?.length) return alert("No camera found");
+
+      if (!cameras?.length) {
+        alert("No camera found");
+        setLoading(false);
+        setCameraStarted(false);
+        return;
+      }
 
       const scanner = new Html5Qrcode("reader");
       scannerRef.current = scanner;
 
+      const isMobile =
+        /Android|iPhone|iPad|iPod|Mobile/i.test(
+          navigator.userAgent
+        );
+
+      let selectedCameraId = cameras[0].id;
+
+      if (isMobile) {
+        const backCamera =
+          cameras.find((cam) =>
+            /back|rear|environment/i.test(cam.label)
+          ) || cameras[cameras.length - 1];
+
+        selectedCameraId = backCamera.id;
+      }
+
       await scanner.start(
-        cameras[0].id,
-        { fps: 10, qrbox: { width: 220, height: 220 } },
+        selectedCameraId,
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 220 },
+          facingMode: isMobile
+            ? "environment"
+            : "user",
+        },
         onScanSuccess,
         () => { }
       );
 
       setLoading(false);
-    } catch {
+    } catch (error) {
+      console.error("Camera start error:", error);
       alert("Camera not available");
       setLoading(false);
       setCameraStarted(false);
@@ -113,8 +142,8 @@ export default function ScanQRPage() {
                   <button
                     onClick={() => setScanMode("camera")}
                     className={`p-4 rounded-2xl border-2 cursor-pointer ${scanMode === "camera"
-                        ? "border-primary bg-primary/10"
-                        : "border-border"
+                      ? "border-primary bg-primary/10"
+                      : "border-border"
                       }`}
                   >
                     <Camera className="w-8 h-8 mx-auto mb-2 text-primary" />
@@ -124,8 +153,8 @@ export default function ScanQRPage() {
                   <button
                     onClick={() => setScanMode("upload")}
                     className={`p-4 rounded-2xl border-2 cursor-pointer ${scanMode === "upload"
-                        ? "border-primary bg-primary/10"
-                        : "border-border"
+                      ? "border-primary bg-primary/10"
+                      : "border-border"
                       }`}
                   >
                     <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
