@@ -215,7 +215,7 @@ export default function ProfilePage() {
           );
         };
 
-        logo.src = '/half logo.svg';
+        logo.src = '/half-logo.svg';
       };
 
       img.src =
@@ -437,7 +437,7 @@ UPI ID:- ${user.upiId}`;
                       />
 
                       <Image
-                        src="/half logo.svg"
+                        src="/half-logo.svg"
                         alt="UPay Logo"
                         width={35}
                         height={35}
